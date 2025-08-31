@@ -1,15 +1,34 @@
 # Vodozemac UniFFI Bindings
 
-This directory contains UniFFI bindings for the vodozemac cryptographic library, providing Swift language bindings for iOS and macOS development.
+This directory contains UniFFI bindings for the vodozemac cryptographic library, providing Swift language bindings for iOS and macOS development with comprehensive error handling.
 
-## Current Implementation
+## 🚀 Latest Updates - Comprehensive Error Types
 
 **Version:** 0.9.0 (matches vodozemac library version)
 
+### New Features
+- **Unified VodozemacError**: Single error enum covering all 14 major error categories
+- **MessageType enum**: Olm message variants (normal, preKey)
+- **SessionOrdering enum**: Session comparison results (equal, better, worse, unconnected) 
+- **Result-based error handling**: All fallible operations use Swift's native error handling
+- **Contract version 29**: Fixed compatibility with UniFFI library version
+
 **Available Functions:**
-- `base64Decode(input: String) -> [UInt8]` - Decode base64 string to bytes
+- `base64Decode(input: String) throws -> [UInt8]` - Decode base64 string with error handling
 - `base64Encode(input: [UInt8]) -> String` - Encode bytes to base64 string
 - `getVersion() -> String` - Get the vodozemac library version
+
+### Error Types Covered
+The `VodozemacError` enum provides comprehensive error handling for:
+- Base64Decode, ProtoBufDecode, Decode, DehydratedDevice
+- Key, LibolmPickle, Pickle, Signature
+- Ecies, MegolmDecryption, OlmDecryption
+- SessionCreation, SessionKeyDecode, Sas
+
+### Testing
+✅ All tests pass including error handling scenarios
+✅ Contract version compatibility verified
+✅ Xcode integration confirmed working
 
 ## Directory Structure
 
@@ -60,11 +79,21 @@ Note: For iOS, do not link a .dylib. Produce a static library or XCFramework (ma
 let version = getVersion()
 print("Vodozemac version: \(version)")
 
-// Base64 operations
+// Base64 operations with error handling
 let data = Array("Hello, World!".utf8)
 let encoded = base64Encode(input: data)
-let decoded = base64Decode(input: encoded)
-let result = String(bytes: decoded, encoding: .utf8)!
+
+do {
+    let decoded = try base64Decode(input: encoded)
+    let result = String(bytes: decoded, encoding: .utf8)!
+    print("Decoded: \(result)")
+} catch let error as VodozemacError {
+    print("Error: \(error)")
+}
+
+// Using enums
+let messageType = MessageType.normal
+let ordering = SessionOrdering.better
 ```
 
 ## Integration with Xcode

@@ -1,8 +1,41 @@
 namespace vodozemac {
     // Base64 utility functions
+    [Throws=VodozemacError]
     sequence<u8> base64_decode(string input);
     string base64_encode(sequence<u8> input);
     
     // Version function
     string get_version();
+};
+
+// Unified error type for all vodozemac operations
+[Error]
+enum VodozemacError {
+    "Base64Decode",
+    "ProtoBufDecode", 
+    "Decode",
+    "DehydratedDevice",
+    "Key",
+    "LibolmPickle",
+    "Pickle",
+    "Signature",
+    "Ecies",
+    "MegolmDecryption",
+    "OlmDecryption",
+    "SessionCreation",
+    "SessionKeyDecode",
+    "Sas",
+};
+
+// Enums
+enum MessageType {
+    "Normal",
+    "PreKey",
+};
+
+enum SessionOrdering {
+    "Equal",
+    "Better",
+    "Worse", 
+    "Unconnected",
 };

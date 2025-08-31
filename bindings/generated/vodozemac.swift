@@ -473,6 +473,340 @@ fileprivate struct FfiConverterString: FfiConverter {
     }
 }
 
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum MessageType {
+    
+    case normal
+    case preKey
+}
+
+
+#if compiler(>=6)
+extension MessageType: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMessageType: FfiConverterRustBuffer {
+    typealias SwiftType = MessageType
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MessageType {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .normal
+        
+        case 2: return .preKey
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: MessageType, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .normal:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .preKey:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMessageType_lift(_ buf: RustBuffer) throws -> MessageType {
+    return try FfiConverterTypeMessageType.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMessageType_lower(_ value: MessageType) -> RustBuffer {
+    return FfiConverterTypeMessageType.lower(value)
+}
+
+
+extension MessageType: Equatable, Hashable {}
+
+
+
+
+
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum SessionOrdering {
+    
+    case equal
+    case better
+    case worse
+    case unconnected
+}
+
+
+#if compiler(>=6)
+extension SessionOrdering: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSessionOrdering: FfiConverterRustBuffer {
+    typealias SwiftType = SessionOrdering
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionOrdering {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .equal
+        
+        case 2: return .better
+        
+        case 3: return .worse
+        
+        case 4: return .unconnected
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SessionOrdering, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .equal:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .better:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .worse:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .unconnected:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSessionOrdering_lift(_ buf: RustBuffer) throws -> SessionOrdering {
+    return try FfiConverterTypeSessionOrdering.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSessionOrdering_lower(_ value: SessionOrdering) -> RustBuffer {
+    return FfiConverterTypeSessionOrdering.lower(value)
+}
+
+
+extension SessionOrdering: Equatable, Hashable {}
+
+
+
+
+
+
+
+public enum VodozemacError: Swift.Error {
+
+    
+    
+    case Base64Decode(message: String)
+    
+    case ProtoBufDecode(message: String)
+    
+    case Decode(message: String)
+    
+    case DehydratedDevice(message: String)
+    
+    case Key(message: String)
+    
+    case LibolmPickle(message: String)
+    
+    case Pickle(message: String)
+    
+    case Signature(message: String)
+    
+    case Ecies(message: String)
+    
+    case MegolmDecryption(message: String)
+    
+    case OlmDecryption(message: String)
+    
+    case SessionCreation(message: String)
+    
+    case SessionKeyDecode(message: String)
+    
+    case Sas(message: String)
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeVodozemacError: FfiConverterRustBuffer {
+    typealias SwiftType = VodozemacError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VodozemacError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Base64Decode(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .ProtoBufDecode(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .Decode(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .DehydratedDevice(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .Key(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 6: return .LibolmPickle(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 7: return .Pickle(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 8: return .Signature(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 9: return .Ecies(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 10: return .MegolmDecryption(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 11: return .OlmDecryption(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 12: return .SessionCreation(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 13: return .SessionKeyDecode(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 14: return .Sas(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: VodozemacError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        case .Base64Decode(_ /* message is ignored*/):
+            writeInt(&buf, Int32(1))
+        case .ProtoBufDecode(_ /* message is ignored*/):
+            writeInt(&buf, Int32(2))
+        case .Decode(_ /* message is ignored*/):
+            writeInt(&buf, Int32(3))
+        case .DehydratedDevice(_ /* message is ignored*/):
+            writeInt(&buf, Int32(4))
+        case .Key(_ /* message is ignored*/):
+            writeInt(&buf, Int32(5))
+        case .LibolmPickle(_ /* message is ignored*/):
+            writeInt(&buf, Int32(6))
+        case .Pickle(_ /* message is ignored*/):
+            writeInt(&buf, Int32(7))
+        case .Signature(_ /* message is ignored*/):
+            writeInt(&buf, Int32(8))
+        case .Ecies(_ /* message is ignored*/):
+            writeInt(&buf, Int32(9))
+        case .MegolmDecryption(_ /* message is ignored*/):
+            writeInt(&buf, Int32(10))
+        case .OlmDecryption(_ /* message is ignored*/):
+            writeInt(&buf, Int32(11))
+        case .SessionCreation(_ /* message is ignored*/):
+            writeInt(&buf, Int32(12))
+        case .SessionKeyDecode(_ /* message is ignored*/):
+            writeInt(&buf, Int32(13))
+        case .Sas(_ /* message is ignored*/):
+            writeInt(&buf, Int32(14))
+
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVodozemacError_lift(_ buf: RustBuffer) throws -> VodozemacError {
+    return try FfiConverterTypeVodozemacError.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVodozemacError_lower(_ value: VodozemacError) -> RustBuffer {
+    return FfiConverterTypeVodozemacError.lower(value)
+}
+
+
+extension VodozemacError: Equatable, Hashable {}
+
+
+
+
+extension VodozemacError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+
+
+
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
@@ -497,8 +831,8 @@ fileprivate struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
         return seq
     }
 }
-public func base64Decode(input: String) -> [UInt8]  {
-    return try!  FfiConverterSequenceUInt8.lift(try! rustCall() {
+public func base64Decode(input: String)throws  -> [UInt8]  {
+    return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
     uniffi_vodozemac_bindings_fn_func_base64_decode(
         FfiConverterString.lower(input),$0
     )
@@ -533,7 +867,7 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_func_base64_decode() != 36763) {
+    if (uniffi_vodozemac_bindings_checksum_func_base64_decode() != 56210) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_func_base64_encode() != 3129) {
