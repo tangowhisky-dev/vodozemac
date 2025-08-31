@@ -82,6 +82,9 @@ insta = "1.43.1"
 [patch.crates-io]
 olm-rs = { git = "https://github.com/poljar/olm-rs" }
 
+[workspace]
+members = [".", "bindings"]
+
 [[bench]]
 name = "olm_benchmark"
 harness = false

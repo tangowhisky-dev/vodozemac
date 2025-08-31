@@ -1,0 +1,8 @@
+namespace vodozemac {
+    // Base64 utility functions
+    sequence<u8> base64_decode(string input);
+    string base64_encode(sequence<u8> input);
+    
+    // Version function
+    string get_version();
+};
