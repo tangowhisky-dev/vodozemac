@@ -2,7 +2,15 @@
 # 
 # Common commands for building and testing the vodozemac Swift bindings
 
-UNIFFI_CLI = /Users/tango16/.cargo/bin/uniffi-bindgen
+# Instead of hardcoding a user‐specific path:
+# UNIFFI_CLI = /Users/tango16/.cargo/bin/uniffi-bindgen
+
+# Dynamically find uniffi-bindgen in PATH (unless overridden) and fail fast if missing
+UNIFFI_CLI ?= $(shell command -v uniffi-bindgen 2>/dev/null)
+
+ifeq ($(UNIFFI_CLI),)
+$(error "uniffi-bindgen not found in PATH. Install via `cargo install uniffi_bindgen` or set UNIFFI_CLI=/path/to/uniffi-bindgen")
+endif
 LIBRARY_DEBUG = ../target/debug/libvodozemac_bindings.dylib
 LIBRARY_RELEASE = ../target/release/libvodozemac_bindings.dylib
 GENERATED_DIR = ./generated
@@ -49,10 +57,9 @@ generate-release: build-release
 	@echo "🏗️  Generating Swift bindings (release)..."
 	mkdir -p $(GENERATED_DIR)
 	$(UNIFFI_CLI) generate --library $(LIBRARY_RELEASE) --language swift --out-dir $(GENERATED_DIR)
-	@echo "✅ Swift bindings generated in $(GENERATED_DIR)"
-
-# Run Rust tests
-test:
+swift-test: generate
+	@echo "🧪 Running Swift integration test..."
+	cd $(GENERATED_DIR) && swift -I . -L ../../target/debug -Xlinker -rpath -Xlinker ../../target/debug -lvodozemac_bindings ../test_bindings.swift
 	@echo "🧪 Running Rust tests..."
 	cargo test
 

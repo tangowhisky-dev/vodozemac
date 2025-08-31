@@ -11,11 +11,11 @@ class VodozemacBindingsTests: XCTestCase {
         XCTAssertEqual(encoded, "SGVsbG8sIFdvcmxkIQ", "Base64 encoding should work correctly")
     }
     
-    func testBase64Decode() {
+    func testBase64Decode() throws {
         // Test decoding a base64 string
         let input = "SGVsbG8sIFdvcmxkIQ"
         let decoded = base64Decode(input: input)
-        let decodedString = String(bytes: decoded, encoding: .utf8)
+        let decodedString = try XCTUnwrap(String(bytes: decoded, encoding: .utf8))
         
         XCTAssertEqual(decodedString, "Hello, World!", "Base64 decoding should work correctly")
     }

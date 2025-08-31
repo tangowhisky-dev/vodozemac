@@ -49,6 +49,9 @@ cargo build
   --language swift \
   --out-dir ./generated
 ```
+Note: For iOS, do not link a .dylib. Produce a static library or XCFramework (macOS/iOS, arm64/x86_64) and integrate via SPM/CocoaPods. See docs/XcodeIntegrationGuide.md (XCFramework packaging and SPM binaryTarget).
+
+Note: For iOS, do not link a .dylib. Produce a static library or XCFramework (macOS/iOS, arm64/x86_64) and integrate via SPM/CocoaPods. See docs/XcodeIntegrationGuide.md (XCFramework packaging and SPM binaryTarget).
 
 ### 3. Use in Swift
 
@@ -92,9 +95,17 @@ cargo test
 
 For comprehensive Swift testing, use the provided test files:
 
-```bash
-# Run the Swift integration tests (requires Swift compiler)
-swift test_bindings.swift
+@@ -96,3 +96,12 @@ # Run the Swift integration tests (requires Swift compiler)
+-# Run the Swift integration tests (requires Swift compiler)
+# Minimal CLI smoke test (macOS example)
+# Adjust lib name/path as needed and ensure the dylib is on DYLD_LIBRARY_PATH.
+swiftc -I ./generated \
+  tests/VodozemacBindingsTests.swift \
+  -L ../target/debug -lvodozemac_bindings \
+  -o ./.build/vodozemac_smoke && ./.build/vodozemac_smoke
+
+# Alternatively, provide a SwiftPM Package.swift and run:
+# swift build && swift test
 ```
 
 ### Xcode Command Line Tests
@@ -104,87 +115,16 @@ A comprehensive command line test is provided to verify compatibility with Xcode
 ```bash
 # Run the Xcode command line test
 ./xcode-test/run_xcode_test.sh
-```
-
-This test:
-- ✅ Compiles Swift bindings using `swiftc`
-- ✅ Links against the vodozemac library
-- ✅ Tests all three binding functions (`getVersion`, `base64Encode`, `base64Decode`)
-- ✅ Includes edge case testing (empty data handling)
-- ✅ Verifies proper Xcode tool integration
-- ✅ Uses a temporary directory for isolation
-- ✅ Cleans up automatically
-
 **Expected Output:**
-```
-🔨 Xcode Command Line Test for Vodozemac Swift Bindings
-=======================================================
-� Checking prerequisites...
-   ✅ Swift compiler found: Apple Swift version 6.1.2
-   ✅ Generated Swift bindings found
-   ✅ Dynamic library found
-�📁 Using temporary directory: /var/folders/.../tmp.XXXXXXXX
-� Copying files for compilation...
-�🔨 Compiling Swift test program...
-✅ Compilation successful!
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-🚀 Running the test program...
-===============================
-🧪 Vodozemac Swift Bindings Test
-===============================
+// Include UniFFI scaffolding to export UDL-generated symbols
+uniffi::include_scaffolding!("vodozemac");
 
-1. Testing getVersion()...
-   Version: 0.9.0
-   ✅ PASSED
+// Existing functions...
 
-2. Testing base64 functions...
-   Encoded: SGVsbG8sIFdvcmxkIQ
-   Decoded: Hello, World!
-   ✅ PASSED
-
-3. Testing edge cases...
-   Empty data handling: ✅ PASSED
-
-🎉 All tests passed!
-✅ Vodozemac Swift bindings are working correctly!
-
-🧹 Cleaning up temporary files...
-
-🎉 XCODE COMMAND LINE TEST PASSED!
-==================================
-✅ The vodozemac Swift bindings work correctly with Xcode tools
-✅ All functions are accessible and working as expected
-🚀 Your bindings are ready for integration into Xcode projects!
-```
-
-### Manual Testing
-
-For manual verification, you can also test the bindings directly:
-
-## Extending the Bindings
-
-To add more vodozemac functionality to the bindings:
-
-1. **Update the UDL file** (`src/vodozemac.udl`) with new function signatures
-2. **Implement the functions** in `src/lib.rs`
-3. **Rebuild the library**: `cargo build`
-4. **Regenerate bindings**: Use the uniffi-bindgen command
-5. **Update tests** to cover new functionality
-
-### Example: Adding a New Function
-
-**UDL (src/vodozemac.udl):**
-```idl
-namespace vodozemac {
-    // Existing functions...
-    
-    // New function
-    string hash_message(string message);
-};
-```
-
-**Rust (src/lib.rs):**
-```rust
 fn hash_message(message: String) -> String {
     // Implementation here
 }

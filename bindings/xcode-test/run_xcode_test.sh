@@ -74,13 +74,13 @@ echo "🚀 Running the test program..."
 echo "==============================="
 
 # Set the library path so the executable can find the dynamic library
-export DYLD_LIBRARY_PATH=".:$DYLD_LIBRARY_PATH"
+export DYLD_LIBRARY_PATH=".:${DYLD_LIBRARY_PATH:-}"
 
 # Run the test
+set +e
 ./vodozemac_test
-
 TEST_EXIT_CODE=$?
-
+set -e
 # Clean up
 echo ""
 echo "🧹 Cleaning up temporary files..."

@@ -335,8 +335,7 @@ let package = Package(
 **Library not loaded:**
 - Verify `libvodozemac_bindings.dylib` is in Library Search Paths
 - Check that the library is added to "Link Binary With Libraries"
-- For iOS, ensure the library is copied to the app bundle
-
+- For iOS, integrate an .xcframework (or static .a packaged as an .xcframework). Do not ship a raw .dylib.
 **Rust library build fails:**
 - Ensure Rust toolchain is installed and up to date
 - Check that all dependencies in Cargo.toml are available
@@ -350,12 +349,14 @@ Use these commands to debug issues:
 # Check library dependencies
 otool -L libvodozemac_bindings.dylib
 
-# Verify library symbols
-nm -D libvodozemac_bindings.dylib | grep vodozemac
+# Verify library symbols (macOS)
+nm -gU libvodozemac_bindings.dylib | grep vodozemac
+
+# Check install_name and rpath usage (macOS)
+otool -l libvodozemac_bindings.dylib | rg -n 'LC_ID_DYLIB|LC_RPATH|@rpath'
 
 # Check module map syntax
 swift -frontend -parse-module-map vodozemacFFI.modulemap
-```
 
 ### 9. Performance Considerations
 

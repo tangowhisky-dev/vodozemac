@@ -4,13 +4,13 @@
 // Run this with: swift test_bindings.swift
 
 import Foundation
+import vodozemac_bindings
 
 // Load the generated Swift bindings
 // In a real project, you would import this as a module
 
 // For this test, we need to compile and link against the library
 // Usage: swift -I generated -L ../target/debug -lvodozemac_bindings test_bindings.swift
-
 func testVodozemacBindings() {
     print("🔬 Testing Vodozemac Swift Bindings")
     print("==================================")
@@ -40,7 +40,7 @@ func testVodozemacBindings() {
     
     // Test 4: Round-trip with known values
     print("\\n4️⃣ Testing known base64 values...")
-    let knownInput = "SGVsbG8sIFdvcmxkIQ"  // "Hello, World!" in base64
+    let knownInput = "SGVsbG8sIFdvcmxkIQ=="  // "Hello, World!" in base64
     let knownDecoded = base64Decode(input: knownInput)
     let knownString = String(bytes: knownDecoded, encoding: .utf8)!
     print("   Known base64: \\(knownInput)")
