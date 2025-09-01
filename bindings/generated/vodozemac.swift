@@ -435,6 +435,38 @@ fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt16: FfiConverterPrimitive {
+    typealias FfiType = UInt16
+    typealias SwiftType = UInt16
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt16 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
+    typealias FfiType = UInt32
+    typealias SwiftType = UInt32
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt32 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias FfiType = UInt64
     typealias SwiftType = UInt64
@@ -2200,6 +2232,277 @@ public func FfiConverterTypeEstablishedEcies_lower(_ value: EstablishedEcies) ->
 
 
 /**
+ * A struct representing a short auth string verification object where the
+ * shared secret has been established.
+ */
+public protocol EstablishedSasProtocol: AnyObject, Sendable {
+    
+    /**
+     * Generate SasBytes using HKDF with the shared secret as the input key material.
+     *
+     * The info string should be agreed upon beforehand, both parties need to
+     * use the same info string.
+     */
+    func bytes(info: String)  -> SasBytes
+    
+    /**
+     * Generate the given number of bytes using HKDF with the shared secret
+     * as the input key material.
+     *
+     * The info string should be agreed upon beforehand, both parties need to
+     * use the same info string.
+     *
+     * The number of bytes we can generate is limited, we can generate up to
+     * 32 * 255 bytes. This function will return an error if the given count is
+     * larger than the limit.
+     */
+    func bytesRaw(info: String, count: UInt32) throws  -> Data
+    
+    /**
+     * Calculate a MAC for the given input using the info string as additional data.
+     *
+     * This should be used to calculate a MAC of the ed25519 identity key of an Account.
+     * The MAC is returned as a base64 encoded string.
+     */
+    func calculateMac(input: String, info: String)  -> Mac
+    
+    /**
+     * Calculate a MAC for the given input using the info string as additional
+     * data, the MAC is returned as an invalid base64 encoded string.
+     *
+     * **Warning**: This method should never be used unless you require libolm
+     * compatibility. Libolm used to incorrectly encode their MAC because the
+     * input buffer was reused as the output buffer.
+     */
+    func calculateMacInvalidBase64(input: String, info: String)  -> String
+    
+    /**
+     * Get the public key that was created by us, that was used to establish
+     * the shared secret.
+     */
+    func ourPublicKey()  -> Curve25519PublicKey
+    
+    /**
+     * Get the public key that was created by the other party, that was used to
+     * establish the shared secret.
+     */
+    func theirPublicKey()  -> Curve25519PublicKey
+    
+    /**
+     * Verify a MAC that was previously created using the calculate_mac method.
+     *
+     * Users should calculate a MAC and send it to the other side, they should
+     * then verify each other's MAC using this method.
+     */
+    func verifyMac(input: String, info: String, tag: Mac) throws 
+    
+}
+/**
+ * A struct representing a short auth string verification object where the
+ * shared secret has been established.
+ */
+open class EstablishedSas: EstablishedSasProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_establishedsas(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_establishedsas(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Generate SasBytes using HKDF with the shared secret as the input key material.
+     *
+     * The info string should be agreed upon beforehand, both parties need to
+     * use the same info string.
+     */
+open func bytes(info: String) -> SasBytes  {
+    return try!  FfiConverterTypeSasBytes_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_establishedsas_bytes(self.uniffiCloneHandle(),
+        FfiConverterString.lower(info),$0
+    )
+})
+}
+    
+    /**
+     * Generate the given number of bytes using HKDF with the shared secret
+     * as the input key material.
+     *
+     * The info string should be agreed upon beforehand, both parties need to
+     * use the same info string.
+     *
+     * The number of bytes we can generate is limited, we can generate up to
+     * 32 * 255 bytes. This function will return an error if the given count is
+     * larger than the limit.
+     */
+open func bytesRaw(info: String, count: UInt32)throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_establishedsas_bytes_raw(self.uniffiCloneHandle(),
+        FfiConverterString.lower(info),
+        FfiConverterUInt32.lower(count),$0
+    )
+})
+}
+    
+    /**
+     * Calculate a MAC for the given input using the info string as additional data.
+     *
+     * This should be used to calculate a MAC of the ed25519 identity key of an Account.
+     * The MAC is returned as a base64 encoded string.
+     */
+open func calculateMac(input: String, info: String) -> Mac  {
+    return try!  FfiConverterTypeMac_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_establishedsas_calculate_mac(self.uniffiCloneHandle(),
+        FfiConverterString.lower(input),
+        FfiConverterString.lower(info),$0
+    )
+})
+}
+    
+    /**
+     * Calculate a MAC for the given input using the info string as additional
+     * data, the MAC is returned as an invalid base64 encoded string.
+     *
+     * **Warning**: This method should never be used unless you require libolm
+     * compatibility. Libolm used to incorrectly encode their MAC because the
+     * input buffer was reused as the output buffer.
+     */
+open func calculateMacInvalidBase64(input: String, info: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_establishedsas_calculate_mac_invalid_base64(self.uniffiCloneHandle(),
+        FfiConverterString.lower(input),
+        FfiConverterString.lower(info),$0
+    )
+})
+}
+    
+    /**
+     * Get the public key that was created by us, that was used to establish
+     * the shared secret.
+     */
+open func ourPublicKey() -> Curve25519PublicKey  {
+    return try!  FfiConverterTypeCurve25519PublicKey_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_establishedsas_our_public_key(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the public key that was created by the other party, that was used to
+     * establish the shared secret.
+     */
+open func theirPublicKey() -> Curve25519PublicKey  {
+    return try!  FfiConverterTypeCurve25519PublicKey_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_establishedsas_their_public_key(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Verify a MAC that was previously created using the calculate_mac method.
+     *
+     * Users should calculate a MAC and send it to the other side, they should
+     * then verify each other's MAC using this method.
+     */
+open func verifyMac(input: String, info: String, tag: Mac)throws   {try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_establishedsas_verify_mac(self.uniffiCloneHandle(),
+        FfiConverterString.lower(input),
+        FfiConverterString.lower(info),
+        FfiConverterTypeMac_lower(tag),$0
+    )
+}
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEstablishedSas: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = EstablishedSas
+
+    public static func lift(_ handle: UInt64) throws -> EstablishedSas {
+        return EstablishedSas(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: EstablishedSas) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EstablishedSas {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: EstablishedSas, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEstablishedSas_lift(_ handle: UInt64) throws -> EstablishedSas {
+    return try FfiConverterTypeEstablishedSas.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEstablishedSas_lower(_ value: EstablishedSas) -> UInt64 {
+    return FfiConverterTypeEstablishedSas.lower(value)
+}
+
+
+
+
+
+
+/**
  * The result of an inbound ECIES channel establishment.
  */
 public protocol InboundCreationResultProtocol: AnyObject, Sendable {
@@ -2508,6 +2811,128 @@ public func FfiConverterTypeInitialMessage_lower(_ value: InitialMessage) -> UIn
 
 
 /**
+ * Error type for the case when we try to generate too many SAS bytes.
+ */
+public protocol InvalidCountProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the error message.
+     */
+    func message()  -> String
+    
+}
+/**
+ * Error type for the case when we try to generate too many SAS bytes.
+ */
+open class InvalidCount: InvalidCountProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_invalidcount(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_invalidcount(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Get the error message.
+     */
+open func message() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_invalidcount_message(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeInvalidCount: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = InvalidCount
+
+    public static func lift(_ handle: UInt64) throws -> InvalidCount {
+        return InvalidCount(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: InvalidCount) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> InvalidCount {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: InvalidCount, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInvalidCount_lift(_ handle: UInt64) throws -> InvalidCount {
+    return try FfiConverterTypeInvalidCount.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInvalidCount_lower(_ value: InvalidCount) -> UInt64 {
+    return FfiConverterTypeInvalidCount.lower(value)
+}
+
+
+
+
+
+
+/**
  * Key ID wrapper for UniFFI
  *
  * Pattern: Simple object with constructor and method
@@ -2643,6 +3068,143 @@ public func FfiConverterTypeKeyId_lift(_ handle: UInt64) throws -> KeyId {
 #endif
 public func FfiConverterTypeKeyId_lower(_ value: KeyId) -> UInt64 {
     return FfiConverterTypeKeyId.lower(value)
+}
+
+
+
+
+
+
+/**
+ * The output type for the SAS MAC calculation.
+ */
+public protocol MacProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the raw bytes of the MAC.
+     */
+    func asBytes()  -> Data
+    
+    /**
+     * Get the MAC as base64-encoded string.
+     */
+    func toBase64()  -> String
+    
+}
+/**
+ * The output type for the SAS MAC calculation.
+ */
+open class Mac: MacProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_mac(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_mac(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Get the raw bytes of the MAC.
+     */
+open func asBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_mac_as_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the MAC as base64-encoded string.
+     */
+open func toBase64() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_mac_to_base64(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMac: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = Mac
+
+    public static func lift(_ handle: UInt64) throws -> Mac {
+        return Mac(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: Mac) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Mac {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: Mac, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMac_lift(_ handle: UInt64) throws -> Mac {
+    return try FfiConverterTypeMac.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMac_lower(_ value: Mac) -> UInt64 {
+    return FfiConverterTypeMac.lower(value)
 }
 
 
@@ -2930,6 +3492,336 @@ public func FfiConverterTypeOutboundCreationResult_lift(_ handle: UInt64) throws
 #endif
 public func FfiConverterTypeOutboundCreationResult_lower(_ value: OutboundCreationResult) -> UInt64 {
     return FfiConverterTypeOutboundCreationResult.lower(value)
+}
+
+
+
+
+
+
+/**
+ * A struct representing a short auth string verification object.
+ */
+public protocol SasProtocol: AnyObject, Sendable {
+    
+    /**
+     * Establish a SAS secret by performing a DH handshake with another public key.
+     *
+     * Returns an EstablishedSas object which can be used to generate SasBytes.
+     */
+    func diffieHellman(theirPublicKey: Curve25519PublicKey) throws  -> EstablishedSas
+    
+    /**
+     * Establish a SAS secret by performing a DH handshake with another public key
+     * in "raw", base64-encoded form.
+     */
+    func diffieHellmanWithRaw(otherPublicKey: String) throws  -> EstablishedSas
+    
+    /**
+     * Get the public key that can be used to establish a shared secret.
+     */
+    func publicKey() throws  -> Curve25519PublicKey
+    
+}
+/**
+ * A struct representing a short auth string verification object.
+ */
+open class Sas: SasProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_sas(self.handle, $0) }
+    }
+    /**
+     * Create a new SAS verification object.
+     */
+public convenience init() {
+    let handle =
+        try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_sas_new($0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_sas(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Establish a SAS secret by performing a DH handshake with another public key.
+     *
+     * Returns an EstablishedSas object which can be used to generate SasBytes.
+     */
+open func diffieHellman(theirPublicKey: Curve25519PublicKey)throws  -> EstablishedSas  {
+    return try  FfiConverterTypeEstablishedSas_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_sas_diffie_hellman(self.uniffiCloneHandle(),
+        FfiConverterTypeCurve25519PublicKey_lower(theirPublicKey),$0
+    )
+})
+}
+    
+    /**
+     * Establish a SAS secret by performing a DH handshake with another public key
+     * in "raw", base64-encoded form.
+     */
+open func diffieHellmanWithRaw(otherPublicKey: String)throws  -> EstablishedSas  {
+    return try  FfiConverterTypeEstablishedSas_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_sas_diffie_hellman_with_raw(self.uniffiCloneHandle(),
+        FfiConverterString.lower(otherPublicKey),$0
+    )
+})
+}
+    
+    /**
+     * Get the public key that can be used to establish a shared secret.
+     */
+open func publicKey()throws  -> Curve25519PublicKey  {
+    return try  FfiConverterTypeCurve25519PublicKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_sas_public_key(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSas: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = Sas
+
+    public static func lift(_ handle: UInt64) throws -> Sas {
+        return Sas(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: Sas) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Sas {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: Sas, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSas_lift(_ handle: UInt64) throws -> Sas {
+    return try FfiConverterTypeSas.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSas_lower(_ value: Sas) -> UInt64 {
+    return FfiConverterTypeSas.lower(value)
+}
+
+
+
+
+
+
+/**
+ * Bytes generated from a shared secret that can be used as the short auth string.
+ */
+public protocol SasBytesProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the raw bytes of the short auth string.
+     */
+    func asBytes()  -> Data
+    
+    /**
+     * Get the three decimal numbers that can be presented to users to perform
+     * the key verification.
+     */
+    func decimals()  -> [UInt16]
+    
+    /**
+     * Get the seven emoji indices that can be presented to users to perform
+     * the key verification.
+     *
+     * The table that maps the index to an emoji can be found in the spec.
+     */
+    func emojiIndices()  -> Data
+    
+}
+/**
+ * Bytes generated from a shared secret that can be used as the short auth string.
+ */
+open class SasBytes: SasBytesProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_sasbytes(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_sasbytes(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Get the raw bytes of the short auth string.
+     */
+open func asBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_sasbytes_as_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the three decimal numbers that can be presented to users to perform
+     * the key verification.
+     */
+open func decimals() -> [UInt16]  {
+    return try!  FfiConverterSequenceUInt16.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_sasbytes_decimals(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the seven emoji indices that can be presented to users to perform
+     * the key verification.
+     *
+     * The table that maps the index to an emoji can be found in the spec.
+     */
+open func emojiIndices() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_sasbytes_emoji_indices(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSasBytes: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = SasBytes
+
+    public static func lift(_ handle: UInt64) throws -> SasBytes {
+        return SasBytes(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: SasBytes) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SasBytes {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: SasBytes, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSasBytes_lift(_ handle: UInt64) throws -> SasBytes {
+    return try FfiConverterTypeSasBytes.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSasBytes_lower(_ value: SasBytes) -> UInt64 {
+    return FfiConverterTypeSasBytes.lower(value)
 }
 
 
@@ -3441,6 +4333,31 @@ extension VodozemacError: Foundation.LocalizedError {
 
 
 
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceUInt16: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt16]
+
+    public static func write(_ value: [UInt16], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterUInt16.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UInt16] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UInt16]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterUInt16.read(from: &buf))
+        }
+        return seq
+    }
+}
 public func base64Decode(input: String)throws  -> Data  {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
     uniffi_vodozemac_bindings_fn_func_base64_decode(
@@ -3564,6 +4481,27 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_method_establishedecies_public_key() != 37246) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_method_establishedsas_bytes() != 31486) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_establishedsas_bytes_raw() != 61019) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_establishedsas_calculate_mac() != 55299) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_establishedsas_calculate_mac_invalid_base64() != 55511) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_establishedsas_our_public_key() != 17153) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_establishedsas_their_public_key() != 25334) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_establishedsas_verify_mac() != 16256) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_method_inboundcreationresult_ecies() != 11349) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3579,7 +4517,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_method_initialmessage_public_key() != 50433) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_method_invalidcount_message() != 59663) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_method_keyid_to_base64() != 49710) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_mac_as_bytes() != 49616) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_mac_to_base64() != 19443) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_message_ciphertext() != 8011) {
@@ -3592,6 +4539,24 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_outboundcreationresult_message() != 48813) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_sas_diffie_hellman() != 18708) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_sas_diffie_hellman_with_raw() != 8967) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_sas_public_key() != 5443) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_sasbytes_as_bytes() != 29287) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_sasbytes_decimals() != 12509) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_sasbytes_emoji_indices() != 11506) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_sharedsecret_as_bytes() != 9990) {
@@ -3655,6 +4620,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_constructor_message_decode() != 46255) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_sas_new() != 21335) {
         return InitializationResult.apiChecksumMismatch
     }
 

@@ -689,6 +689,19 @@ func runEciesTestsSection() {
     }
 }
 
+func runSasTestsSection() {
+    print("🔐 Testing SAS (Short Authentication String)...")
+    print("==================================================================")
+    
+    if runSasTests() {
+        print("\n✅ All SAS tests PASSED")
+    } else {
+        print("\n❌ Some SAS tests FAILED")
+        exit(1)
+    }
+}
+
 // Run the tests
 runTests()
 runEciesTestsSection()
+runSasTestsSection()

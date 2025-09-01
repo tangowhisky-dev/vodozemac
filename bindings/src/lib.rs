@@ -1,4 +1,41 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of timpl From<vodozemac::ecies::MessageDecodeError> for VodozemacError {
+    fn from(error: vodozemac::ecies::MessageDecodeError) -> Self {
+        VodozemacError::Decode(error.to_string())
+    }
+}
+
+// Error conversions for SAS types
+impl From<vodozemac::sas::SasError> for VodozemacError {
+    fn from(error: vodozemac::sas::SasError) -> Self {
+        VodozemacError::Sas(error.to_string())
+    }
+}
+
+impl From<vodozemac::sas::InvalidCount> for VodozemacError {
+    fn from(error: vodozemac::sas::InvalidCount) -> Self {
+        VodozemacError::Sas(error.to_string())
+    }
+}
+
+impl From<vodozemac::KeyError> for VodozemacError {
+    fn from(error: vodozemac::KeyError) -> Self {
+        VodozemacError::Key(error.to_string())
+    }
+}
+
+impl From<vodozemac::Base64DecodeError> for VodozemacError {
+    fn from(error: vodozemac::Base64DecodeError) -> Self {
+        VodozemacError::Base64Decode(error.to_string())
+    }
+}
+
+impl From<base64::DecodeError> for VodozemacError {
+    fn from(error: base64::DecodeError) -> Self {
+        VodozemacError::Base64Decode(format!("Base64 decode error: {}", error))
+    }
+}
+
+// Enumslla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -54,6 +91,25 @@ impl From<vodozemac::ecies::Error> for VodozemacError {
 impl From<vodozemac::ecies::MessageDecodeError> for VodozemacError {
     fn from(error: vodozemac::ecies::MessageDecodeError) -> Self {
         VodozemacError::Decode(error.to_string())
+    }
+}
+
+// Error conversions for SAS types
+impl From<vodozemac::KeyError> for VodozemacError {
+    fn from(error: vodozemac::KeyError) -> Self {
+        VodozemacError::Key(error.to_string())
+    }
+}
+
+impl From<vodozemac::sas::SasError> for VodozemacError {
+    fn from(error: vodozemac::sas::SasError) -> Self {
+        VodozemacError::Sas(error.to_string())
+    }
+}
+
+impl From<vodozemac::sas::InvalidCount> for VodozemacError {
+    fn from(error: vodozemac::sas::InvalidCount) -> Self {
+        VodozemacError::Sas(error.to_string())
     }
 }
 
@@ -807,6 +863,207 @@ impl EstablishedEcies {
         let mut inner = self.inner.lock().unwrap();
         let plaintext = inner.decrypt(&message.inner)?;
         Ok(plaintext)
+    }
+}
+
+// =============================================================================
+// SAS (Short Authentication String) Structs
+// =============================================================================
+
+/// Error type for the case when we try to generate too many SAS bytes.
+#[derive(uniffi::Object)]
+pub struct InvalidCount {
+    inner: vodozemac::sas::InvalidCount,
+}
+
+#[uniffi::export]
+impl InvalidCount {
+    /// Get the error message.
+    pub fn message(&self) -> String {
+        self.inner.to_string()
+    }
+}
+
+/// The output type for the SAS MAC calculation.
+#[derive(uniffi::Object)]
+pub struct Mac {
+    inner: vodozemac::sas::Mac,
+}
+
+#[uniffi::export]
+impl Mac {
+    /// Get the MAC as base64-encoded string.
+    pub fn to_base64(&self) -> String {
+        self.inner.to_base64()
+    }
+
+    /// Get the raw bytes of the MAC.
+    pub fn as_bytes(&self) -> Vec<u8> {
+        self.inner.as_bytes().to_vec()
+    }
+}
+
+/// Bytes generated from a shared secret that can be used as the short auth string.
+#[derive(uniffi::Object)]
+pub struct SasBytes {
+    inner: vodozemac::sas::SasBytes,
+}
+
+#[uniffi::export]
+impl SasBytes {
+    /// Get the seven emoji indices that can be presented to users to perform
+    /// the key verification.
+    /// 
+    /// The table that maps the index to an emoji can be found in the spec.
+    pub fn emoji_indices(&self) -> Vec<u8> {
+        self.inner.emoji_indices().to_vec()
+    }
+
+    /// Get the three decimal numbers that can be presented to users to perform
+    /// the key verification.
+    pub fn decimals(&self) -> Vec<u16> {
+        let (first, second, third) = self.inner.decimals();
+        vec![first, second, third]
+    }
+
+    /// Get the raw bytes of the short auth string.
+    pub fn as_bytes(&self) -> Vec<u8> {
+        self.inner.as_bytes().to_vec()
+    }
+}
+
+/// A struct representing a short auth string verification object.
+#[derive(uniffi::Object)]
+pub struct Sas {
+    inner: std::sync::RwLock<Option<vodozemac::sas::Sas>>,
+}
+
+#[uniffi::export]
+impl Sas {
+    /// Create a new SAS verification object.
+    #[uniffi::constructor]
+    pub fn new() -> Arc<Sas> {
+        Arc::new(Sas {
+            inner: std::sync::RwLock::new(Some(vodozemac::sas::Sas::new())),
+        })
+    }
+
+    /// Get the public key that can be used to establish a shared secret.
+    pub fn public_key(&self) -> Result<Arc<Curve25519PublicKey>, VodozemacError> {
+        let inner = self.inner.read().unwrap();
+        let sas = inner.as_ref().ok_or_else(|| {
+            VodozemacError::Sas("SAS session already consumed".to_string())
+        })?;
+        Ok(Arc::new(Curve25519PublicKey(sas.public_key())))
+    }
+
+    /// Establish a SAS secret by performing a DH handshake with another public key.
+    /// 
+    /// Returns an EstablishedSas object which can be used to generate SasBytes.
+    pub fn diffie_hellman(
+        &self, 
+        their_public_key: Arc<Curve25519PublicKey>
+    ) -> Result<Arc<EstablishedSas>, VodozemacError> {
+        let mut inner = self.inner.write().unwrap();
+        let sas = inner.take().ok_or_else(|| {
+            VodozemacError::Sas("SAS session already consumed".to_string())
+        })?;
+        
+        let established = sas.diffie_hellman(their_public_key.0)?;
+        Ok(Arc::new(EstablishedSas { inner: established }))
+    }
+
+    /// Establish a SAS secret by performing a DH handshake with another public key
+    /// in "raw", base64-encoded form.
+    pub fn diffie_hellman_with_raw(
+        &self, 
+        other_public_key: String
+    ) -> Result<Arc<EstablishedSas>, VodozemacError> {
+        let mut inner = self.inner.write().unwrap();
+        let sas = inner.take().ok_or_else(|| {
+            VodozemacError::Sas("SAS session already consumed".to_string())
+        })?;
+        
+        let established = sas.diffie_hellman_with_raw(&other_public_key)?;
+        Ok(Arc::new(EstablishedSas { inner: established }))
+    }
+}
+
+/// A struct representing a short auth string verification object where the
+/// shared secret has been established.
+#[derive(uniffi::Object)]
+pub struct EstablishedSas {
+    inner: vodozemac::sas::EstablishedSas,
+}
+
+#[uniffi::export]
+impl EstablishedSas {
+    /// Generate SasBytes using HKDF with the shared secret as the input key material.
+    /// 
+    /// The info string should be agreed upon beforehand, both parties need to
+    /// use the same info string.
+    pub fn bytes(&self, info: String) -> Arc<SasBytes> {
+        let sas_bytes = self.inner.bytes(&info);
+        Arc::new(SasBytes { inner: sas_bytes })
+    }
+
+    /// Generate the given number of bytes using HKDF with the shared secret
+    /// as the input key material.
+    /// 
+    /// The info string should be agreed upon beforehand, both parties need to
+    /// use the same info string.
+    /// 
+    /// The number of bytes we can generate is limited, we can generate up to
+    /// 32 * 255 bytes. This function will return an error if the given count is
+    /// larger than the limit.
+    pub fn bytes_raw(&self, info: String, count: u32) -> Result<Vec<u8>, VodozemacError> {
+        let bytes = self.inner.bytes_raw(&info, count as usize)?;
+        Ok(bytes)
+    }
+
+    /// Calculate a MAC for the given input using the info string as additional data.
+    /// 
+    /// This should be used to calculate a MAC of the ed25519 identity key of an Account.
+    /// The MAC is returned as a base64 encoded string.
+    pub fn calculate_mac(&self, input: String, info: String) -> Arc<Mac> {
+        let mac = self.inner.calculate_mac(&input, &info);
+        Arc::new(Mac { inner: mac })
+    }
+
+    /// Calculate a MAC for the given input using the info string as additional
+    /// data, the MAC is returned as an invalid base64 encoded string.
+    /// 
+    /// **Warning**: This method should never be used unless you require libolm
+    /// compatibility. Libolm used to incorrectly encode their MAC because the
+    /// input buffer was reused as the output buffer.
+    pub fn calculate_mac_invalid_base64(&self, input: String, info: String) -> String {
+        self.inner.calculate_mac_invalid_base64(&input, &info)
+    }
+
+    /// Verify a MAC that was previously created using the calculate_mac method.
+    /// 
+    /// Users should calculate a MAC and send it to the other side, they should
+    /// then verify each other's MAC using this method.
+    pub fn verify_mac(
+        &self,
+        input: String,
+        info: String,
+        tag: Arc<Mac>
+    ) -> Result<(), VodozemacError> {
+        self.inner.verify_mac(&input, &info, &tag.inner)?;
+        Ok(())
+    }
+
+    /// Get the public key that was created by us, that was used to establish
+    /// the shared secret.
+    pub fn our_public_key(&self) -> Arc<Curve25519PublicKey> {
+        Arc::new(Curve25519PublicKey(self.inner.our_public_key()))
+    }
+
+    /// Get the public key that was created by the other party, that was used to
+    /// establish the shared secret.
+    pub fn their_public_key(&self) -> Arc<Curve25519PublicKey> {
+        Arc::new(Curve25519PublicKey(self.inner.their_public_key()))
     }
 }
 
