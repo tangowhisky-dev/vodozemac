@@ -435,6 +435,30 @@ fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterBool : FfiConverter {
+    typealias FfiType = Int8
+    typealias SwiftType = Bool
+
+    public static func lift(_ value: Int8) throws -> Bool {
+        return value != 0
+    }
+
+    public static func lower(_ value: Bool) -> Int8 {
+        return value ? 1 : 0
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Bool, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -895,6 +919,764 @@ public func FfiConverterTypeCurve25519SecretKey_lower(_ value: Curve25519SecretK
 
 
 /**
+ * Wrapper around vodozemac::Ed25519Keypair
+ *
+ * Ed25519 keypair containing both public and secret keys for digital signatures
+ */
+public protocol Ed25519KeypairProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the public key from this keypair
+     *
+     * Pattern: Method returning Arc<AnotherObject>
+     */
+    func publicKey()  -> Ed25519PublicKey
+    
+    /**
+     * Sign a message with the secret key from this keypair
+     *
+     * Pattern: Method taking bytes and returning Arc<AnotherObject>
+     */
+    func sign(message: Data)  -> Ed25519Signature
+    
+}
+/**
+ * Wrapper around vodozemac::Ed25519Keypair
+ *
+ * Ed25519 keypair containing both public and secret keys for digital signatures
+ */
+open class Ed25519Keypair: Ed25519KeypairProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_ed25519keypair(self.handle, $0) }
+    }
+    /**
+     * Generate a new random Ed25519 keypair
+     *
+     * Pattern: Simple constructor with no parameters
+     */
+public convenience init() {
+    let handle =
+        try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_ed25519keypair_new($0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_ed25519keypair(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Get the public key from this keypair
+     *
+     * Pattern: Method returning Arc<AnotherObject>
+     */
+open func publicKey() -> Ed25519PublicKey  {
+    return try!  FfiConverterTypeEd25519PublicKey_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519keypair_public_key(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Sign a message with the secret key from this keypair
+     *
+     * Pattern: Method taking bytes and returning Arc<AnotherObject>
+     */
+open func sign(message: Data) -> Ed25519Signature  {
+    return try!  FfiConverterTypeEd25519Signature_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519keypair_sign(self.uniffiCloneHandle(),
+        FfiConverterData.lower(message),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEd25519Keypair: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = Ed25519Keypair
+
+    public static func lift(_ handle: UInt64) throws -> Ed25519Keypair {
+        return Ed25519Keypair(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: Ed25519Keypair) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Ed25519Keypair {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: Ed25519Keypair, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEd25519Keypair_lift(_ handle: UInt64) throws -> Ed25519Keypair {
+    return try FfiConverterTypeEd25519Keypair.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEd25519Keypair_lower(_ value: Ed25519Keypair) -> UInt64 {
+    return FfiConverterTypeEd25519Keypair.lower(value)
+}
+
+
+
+
+
+
+/**
+ * Wrapper around vodozemac::Ed25519PublicKey
+ *
+ * Ed25519 public key used to verify digital signatures
+ */
+public protocol Ed25519PublicKeyProtocol: AnyObject, Sendable {
+    
+    /**
+     * View this public key as a byte array
+     *
+     * Pattern: Method returning Vec<u8>
+     */
+    func asBytes()  -> Data
+    
+    /**
+     * Convert the public key to a base64 string
+     *
+     * Pattern: Method returning primitive type (String)
+     */
+    func toBase64()  -> String
+    
+    /**
+     * Verify that the provided signature for a message was signed by this key
+     *
+     * Pattern: Method with complex parameters, returns Result
+     */
+    func verify(message: Data, signature: Ed25519Signature) throws 
+    
+}
+/**
+ * Wrapper around vodozemac::Ed25519PublicKey
+ *
+ * Ed25519 public key used to verify digital signatures
+ */
+open class Ed25519PublicKey: Ed25519PublicKeyProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_ed25519publickey(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_ed25519publickey(handle, $0) }
+    }
+
+    
+    /**
+     * Create an Ed25519PublicKey from a base64 string
+     *
+     * Pattern: Fallible constructor with error handling
+     */
+public static func fromBase64(input: String)throws  -> Ed25519PublicKey  {
+    return try  FfiConverterTypeEd25519PublicKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_ed25519publickey_from_base64(
+        FfiConverterString.lower(input),$0
+    )
+})
+}
+    
+    /**
+     * Create an Ed25519PublicKey from a slice of bytes
+     *
+     * Pattern: Fallible constructor with error handling
+     */
+public static func fromSlice(bytes: Data)throws  -> Ed25519PublicKey  {
+    return try  FfiConverterTypeEd25519PublicKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_ed25519publickey_from_slice(
+        FfiConverterData.lower(bytes),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * View this public key as a byte array
+     *
+     * Pattern: Method returning Vec<u8>
+     */
+open func asBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519publickey_as_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Convert the public key to a base64 string
+     *
+     * Pattern: Method returning primitive type (String)
+     */
+open func toBase64() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519publickey_to_base64(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Verify that the provided signature for a message was signed by this key
+     *
+     * Pattern: Method with complex parameters, returns Result
+     */
+open func verify(message: Data, signature: Ed25519Signature)throws   {try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_ed25519publickey_verify(self.uniffiCloneHandle(),
+        FfiConverterData.lower(message),
+        FfiConverterTypeEd25519Signature_lower(signature),$0
+    )
+}
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEd25519PublicKey: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = Ed25519PublicKey
+
+    public static func lift(_ handle: UInt64) throws -> Ed25519PublicKey {
+        return Ed25519PublicKey(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: Ed25519PublicKey) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Ed25519PublicKey {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: Ed25519PublicKey, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEd25519PublicKey_lift(_ handle: UInt64) throws -> Ed25519PublicKey {
+    return try FfiConverterTypeEd25519PublicKey.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEd25519PublicKey_lower(_ value: Ed25519PublicKey) -> UInt64 {
+    return FfiConverterTypeEd25519PublicKey.lower(value)
+}
+
+
+
+
+
+
+/**
+ * Wrapper around vodozemac::Ed25519SecretKey
+ *
+ * Ed25519 secret key used to create digital signatures
+ */
+public protocol Ed25519SecretKeyProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the public key that matches this secret key
+     *
+     * Pattern: Method returning Arc<AnotherObject>
+     */
+    func publicKey()  -> Ed25519PublicKey
+    
+    /**
+     * Sign the given slice of bytes with this secret key
+     *
+     * Pattern: Method taking bytes and returning Arc<AnotherObject>
+     */
+    func sign(message: Data)  -> Ed25519Signature
+    
+    /**
+     * Convert the secret key to a base64 encoded string
+     *
+     * Pattern: Method returning primitive type (String)
+     */
+    func toBase64()  -> String
+    
+    /**
+     * Get the byte representation of the secret key
+     *
+     * Pattern: Method returning Vec<u8> (Box<[u8; 32]> is converted to Vec<u8>)
+     */
+    func toBytes()  -> Data
+    
+}
+/**
+ * Wrapper around vodozemac::Ed25519SecretKey
+ *
+ * Ed25519 secret key used to create digital signatures
+ */
+open class Ed25519SecretKey: Ed25519SecretKeyProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_ed25519secretkey(self.handle, $0) }
+    }
+    /**
+     * Generate a new random Ed25519 secret key
+     *
+     * Pattern: Simple constructor with no parameters
+     */
+public convenience init() {
+    let handle =
+        try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_ed25519secretkey_new($0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_ed25519secretkey(handle, $0) }
+    }
+
+    
+    /**
+     * Create an Ed25519SecretKey from a base64 string
+     *
+     * Pattern: Fallible constructor with error handling
+     */
+public static func fromBase64(input: String)throws  -> Ed25519SecretKey  {
+    return try  FfiConverterTypeEd25519SecretKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_ed25519secretkey_from_base64(
+        FfiConverterString.lower(input),$0
+    )
+})
+}
+    
+    /**
+     * Create an Ed25519SecretKey from a slice of bytes
+     *
+     * Pattern: Constructor with validation
+     */
+public static func fromSlice(bytes: Data)throws  -> Ed25519SecretKey  {
+    return try  FfiConverterTypeEd25519SecretKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_ed25519secretkey_from_slice(
+        FfiConverterData.lower(bytes),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Get the public key that matches this secret key
+     *
+     * Pattern: Method returning Arc<AnotherObject>
+     */
+open func publicKey() -> Ed25519PublicKey  {
+    return try!  FfiConverterTypeEd25519PublicKey_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519secretkey_public_key(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Sign the given slice of bytes with this secret key
+     *
+     * Pattern: Method taking bytes and returning Arc<AnotherObject>
+     */
+open func sign(message: Data) -> Ed25519Signature  {
+    return try!  FfiConverterTypeEd25519Signature_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519secretkey_sign(self.uniffiCloneHandle(),
+        FfiConverterData.lower(message),$0
+    )
+})
+}
+    
+    /**
+     * Convert the secret key to a base64 encoded string
+     *
+     * Pattern: Method returning primitive type (String)
+     */
+open func toBase64() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519secretkey_to_base64(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the byte representation of the secret key
+     *
+     * Pattern: Method returning Vec<u8> (Box<[u8; 32]> is converted to Vec<u8>)
+     */
+open func toBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519secretkey_to_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEd25519SecretKey: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = Ed25519SecretKey
+
+    public static func lift(_ handle: UInt64) throws -> Ed25519SecretKey {
+        return Ed25519SecretKey(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: Ed25519SecretKey) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Ed25519SecretKey {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: Ed25519SecretKey, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEd25519SecretKey_lift(_ handle: UInt64) throws -> Ed25519SecretKey {
+    return try FfiConverterTypeEd25519SecretKey.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEd25519SecretKey_lower(_ value: Ed25519SecretKey) -> UInt64 {
+    return FfiConverterTypeEd25519SecretKey.lower(value)
+}
+
+
+
+
+
+
+/**
+ * Wrapper around vodozemac::Ed25519Signature
+ *
+ * Ed25519 digital signature that can be used to verify message authenticity
+ */
+public protocol Ed25519SignatureProtocol: AnyObject, Sendable {
+    
+    /**
+     * Convert the signature to a base64 encoded string
+     *
+     * Pattern: Method returning primitive type (String)
+     */
+    func toBase64()  -> String
+    
+    /**
+     * Convert the signature to a byte array
+     *
+     * Pattern: Method returning Vec<u8>
+     */
+    func toBytes()  -> Data
+    
+}
+/**
+ * Wrapper around vodozemac::Ed25519Signature
+ *
+ * Ed25519 digital signature that can be used to verify message authenticity
+ */
+open class Ed25519Signature: Ed25519SignatureProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_ed25519signature(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_ed25519signature(handle, $0) }
+    }
+
+    
+    /**
+     * Create an Ed25519Signature from a base64 string
+     *
+     * Pattern: Fallible constructor with error handling
+     */
+public static func fromBase64(input: String)throws  -> Ed25519Signature  {
+    return try  FfiConverterTypeEd25519Signature_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_ed25519signature_from_base64(
+        FfiConverterString.lower(input),$0
+    )
+})
+}
+    
+    /**
+     * Create an Ed25519Signature from a slice of bytes
+     *
+     * Pattern: Fallible constructor with error handling
+     */
+public static func fromSlice(bytes: Data)throws  -> Ed25519Signature  {
+    return try  FfiConverterTypeEd25519Signature_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_ed25519signature_from_slice(
+        FfiConverterData.lower(bytes),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Convert the signature to a base64 encoded string
+     *
+     * Pattern: Method returning primitive type (String)
+     */
+open func toBase64() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519signature_to_base64(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Convert the signature to a byte array
+     *
+     * Pattern: Method returning Vec<u8>
+     */
+open func toBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519signature_to_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEd25519Signature: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = Ed25519Signature
+
+    public static func lift(_ handle: UInt64) throws -> Ed25519Signature {
+        return Ed25519Signature(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: Ed25519Signature) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Ed25519Signature {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: Ed25519Signature, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEd25519Signature_lift(_ handle: UInt64) throws -> Ed25519Signature {
+    return try FfiConverterTypeEd25519Signature.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEd25519Signature_lower(_ value: Ed25519Signature) -> UInt64 {
+    return FfiConverterTypeEd25519Signature.lower(value)
+}
+
+
+
+
+
+
+/**
  * Key ID wrapper for UniFFI
  *
  * Pattern: Simple object with constructor and method
@@ -1030,6 +1812,180 @@ public func FfiConverterTypeKeyId_lift(_ handle: UInt64) throws -> KeyId {
 #endif
 public func FfiConverterTypeKeyId_lower(_ value: KeyId) -> UInt64 {
     return FfiConverterTypeKeyId.lower(value)
+}
+
+
+
+
+
+
+/**
+ * Wrapper around vodozemac::SharedSecret
+ *
+ * The result of a Diffie-Hellman key exchange
+ */
+public protocol SharedSecretProtocol: AnyObject, Sendable {
+    
+    /**
+     * View this shared secret as a byte array
+     *
+     * Pattern: Method returning Vec<u8>
+     */
+    func asBytes()  -> Data
+    
+    /**
+     * Convert the shared secret to bytes
+     *
+     * Pattern: Method returning Vec<u8>
+     */
+    func toBytes()  -> Data
+    
+    /**
+     * Check if the key exchange was contributory
+     *
+     * Returns true if the key exchange was contributory (good),
+     * false otherwise (can be bad for some protocols)
+     *
+     * Pattern: Method returning primitive type (bool)
+     */
+    func wasContributory()  -> Bool
+    
+}
+/**
+ * Wrapper around vodozemac::SharedSecret
+ *
+ * The result of a Diffie-Hellman key exchange
+ */
+open class SharedSecret: SharedSecretProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_sharedsecret(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_sharedsecret(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * View this shared secret as a byte array
+     *
+     * Pattern: Method returning Vec<u8>
+     */
+open func asBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_sharedsecret_as_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Convert the shared secret to bytes
+     *
+     * Pattern: Method returning Vec<u8>
+     */
+open func toBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_sharedsecret_to_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Check if the key exchange was contributory
+     *
+     * Returns true if the key exchange was contributory (good),
+     * false otherwise (can be bad for some protocols)
+     *
+     * Pattern: Method returning primitive type (bool)
+     */
+open func wasContributory() -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_sharedsecret_was_contributory(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSharedSecret: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = SharedSecret
+
+    public static func lift(_ handle: UInt64) throws -> SharedSecret {
+        return SharedSecret(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: SharedSecret) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SharedSecret {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: SharedSecret, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSharedSecret_lift(_ handle: UInt64) throws -> SharedSecret {
+    return try FfiConverterTypeSharedSecret.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSharedSecret_lower(_ value: SharedSecret) -> UInt64 {
+    return FfiConverterTypeSharedSecret.lower(value)
 }
 
 
@@ -1430,7 +2386,49 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_method_curve25519secretkey_to_bytes() != 6874) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519keypair_public_key() != 59175) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519keypair_sign() != 33429) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519publickey_as_bytes() != 30460) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519publickey_to_base64() != 16715) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519publickey_verify() != 60604) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519secretkey_public_key() != 25167) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519secretkey_sign() != 64533) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519secretkey_to_base64() != 28907) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519secretkey_to_bytes() != 15165) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519signature_to_base64() != 34735) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519signature_to_bytes() != 14918) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_method_keyid_to_base64() != 49710) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_sharedsecret_as_bytes() != 9990) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_sharedsecret_to_bytes() != 13349) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_sharedsecret_was_contributory() != 30755) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_constructor_curve25519publickey_from_base64() != 44436) {
@@ -1446,6 +2444,30 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_constructor_curve25519secretkey_new() != 44920) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_ed25519keypair_new() != 55338) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_ed25519publickey_from_base64() != 49198) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_ed25519publickey_from_slice() != 9931) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_ed25519secretkey_from_base64() != 49991) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_ed25519secretkey_from_slice() != 42166) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_ed25519secretkey_new() != 5343) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_ed25519signature_from_base64() != 54087) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_ed25519signature_from_slice() != 57535) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_constructor_keyid_from_u64() != 55467) {
