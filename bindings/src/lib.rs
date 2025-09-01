@@ -8,6 +8,7 @@
 //! using Mozilla's UniFFI tool.
 
 use vodozemac::{base64_decode as vz_base64_decode, base64_encode as vz_base64_encode, VERSION as VZ_VERSION};
+use std::sync::Arc;
 
 // Wrapper error types that UniFFI can handle
 
@@ -41,6 +42,19 @@ pub enum VodozemacError {
     SessionKeyDecode(String),
     #[error("SAS error: {0}")]
     Sas(String),
+}
+
+// Error conversions for ECIES types
+impl From<vodozemac::ecies::Error> for VodozemacError {
+    fn from(error: vodozemac::ecies::Error) -> Self {
+        VodozemacError::Ecies(error.to_string())
+    }
+}
+
+impl From<vodozemac::ecies::MessageDecodeError> for VodozemacError {
+    fn from(error: vodozemac::ecies::MessageDecodeError) -> Self {
+        VodozemacError::Decode(error.to_string())
+    }
 }
 
 // Enums
@@ -530,6 +544,269 @@ impl SharedSecret {
 impl From<vodozemac::SharedSecret> for SharedSecret {
     fn from(secret: vodozemac::SharedSecret) -> Self {
         Self(secret)
+    }
+}
+
+/// A check code that can be used to confirm that two EstablishedEcies
+/// objects share the same secret. This is supposed to be shared out-of-band to
+/// protect against active MITM attacks.
+#[derive(uniffi::Object, Debug, Clone, PartialEq, Eq)]
+pub struct CheckCode {
+    inner: vodozemac::ecies::CheckCode,
+}
+
+#[uniffi::export]
+impl CheckCode {
+    /// Convert the check code to a Vec of two bytes.
+    /// UniFFI doesn't support fixed arrays, so we return a Vec.
+    pub fn as_bytes(&self) -> Vec<u8> {
+        self.inner.as_bytes().to_vec()
+    }
+
+    /// Convert the check code to two base-10 numbers.
+    /// The number should be displayed with a leading 0 in case the first digit is a 0.
+    pub fn to_digit(&self) -> u8 {
+        self.inner.to_digit()
+    }
+}
+
+/// An encrypted message an EstablishedEcies channel has sent.
+#[derive(uniffi::Object, Debug)]
+pub struct Message {
+    inner: vodozemac::ecies::Message,
+}
+
+#[uniffi::export]
+impl Message {
+    /// Encode the message as a string.
+    /// The ciphertext bytes will be encoded using unpadded base64.
+    pub fn encode(&self) -> String {
+        self.inner.encode()
+    }
+
+    /// Attempt to decode a base64 string into a Message.
+    #[uniffi::constructor]
+    pub fn decode(message: &str) -> Result<Arc<Self>, VodozemacError> {
+        let inner = vodozemac::ecies::Message::decode(message)?;
+        Ok(Arc::new(Self { inner }))
+    }
+
+    /// Get the ciphertext bytes.
+    pub fn ciphertext(&self) -> Vec<u8> {
+        self.inner.ciphertext.clone()
+    }
+}
+
+/// The initial message, sent by the ECIES channel establisher.
+/// This message embeds the public key of the message creator allowing the other
+/// side to establish a channel using this message.
+#[derive(uniffi::Object, Debug)]
+pub struct InitialMessage {
+    inner: vodozemac::ecies::InitialMessage,
+}
+
+#[uniffi::export]
+impl InitialMessage {
+    /// Get the ephemeral public key that was used to establish the ECIES channel.
+    pub fn public_key(&self) -> Arc<Curve25519PublicKey> {
+        Arc::new(Curve25519PublicKey::from(self.inner.public_key))
+    }
+
+    /// Get the ciphertext of the initial message.
+    pub fn ciphertext(&self) -> Vec<u8> {
+        self.inner.ciphertext.clone()
+    }
+
+    /// Encode the message as a string.
+    /// The string will contain the base64-encoded Curve25519 public key and the
+    /// ciphertext of the message separated by a `|`.
+    pub fn encode(&self) -> String {
+        self.inner.encode()
+    }
+
+    /// Attempt to decode a string into an InitialMessage.
+    #[uniffi::constructor]
+    pub fn decode(message: &str) -> Result<Arc<Self>, VodozemacError> {
+        let inner = vodozemac::ecies::InitialMessage::decode(message)?;
+        Ok(Arc::new(Self { inner }))
+    }
+}
+
+/// The result of an inbound ECIES channel establishment.
+#[derive(uniffi::Object, Debug)]
+pub struct InboundCreationResult {
+    /// The established ECIES channel.
+    ecies: Arc<EstablishedEcies>,
+    /// The plaintext of the initial message.
+    message: Vec<u8>,
+}
+
+#[uniffi::export]
+impl InboundCreationResult {
+    /// Get the established ECIES channel.
+    pub fn ecies(&self) -> Arc<EstablishedEcies> {
+        self.ecies.clone()
+    }
+
+    /// Get the plaintext of the initial message.
+    pub fn message(&self) -> Vec<u8> {
+        self.message.clone()
+    }
+}
+
+/// The result of an outbound ECIES channel establishment.
+#[derive(uniffi::Object, Debug)]
+pub struct OutboundCreationResult {
+    /// The established ECIES channel.
+    ecies: Arc<EstablishedEcies>,
+    /// The initial message.
+    message: Arc<InitialMessage>,
+}
+
+#[uniffi::export]
+impl OutboundCreationResult {
+    /// Get the established ECIES channel.
+    pub fn ecies(&self) -> Arc<EstablishedEcies> {
+        self.ecies.clone()
+    }
+
+    /// Get the initial message.
+    pub fn message(&self) -> Arc<InitialMessage> {
+        self.message.clone()
+    }
+}
+
+/// An unestablished ECIES session.
+#[derive(uniffi::Object)]
+pub struct Ecies {
+    inner: std::sync::RwLock<Option<vodozemac::ecies::Ecies>>,
+}
+
+#[uniffi::export]
+impl Ecies {
+    /// Create a new, random, unestablished ECIES session.
+    /// This method will use the `MATRIX_QR_CODE_LOGIN` info.
+    #[uniffi::constructor]
+    pub fn new() -> Arc<Self> {
+        let inner = vodozemac::ecies::Ecies::new();
+        Arc::new(Self {
+            inner: std::sync::RwLock::new(Some(inner)),
+        })
+    }
+
+    /// Create a new, random, unestablished ECIES session with the given application info.
+    #[uniffi::constructor]
+    pub fn with_info(info: &str) -> Arc<Self> {
+        let inner = vodozemac::ecies::Ecies::with_info(info);
+        Arc::new(Self {
+            inner: std::sync::RwLock::new(Some(inner)),
+        })
+    }
+
+    /// Get our Curve25519PublicKey.
+    /// This public key needs to be sent to the other side to establish an ECIES channel.
+    pub fn public_key(&self) -> Result<Arc<Curve25519PublicKey>, VodozemacError> {
+        let inner_guard = self.inner.read().unwrap();
+        match inner_guard.as_ref() {
+            Some(ecies) => {
+                let public_key = ecies.public_key();
+                Ok(Arc::new(Curve25519PublicKey::from(public_key)))
+            }
+            None => Err(VodozemacError::Key(
+                "ECIES session has been consumed".to_string(),
+            )),
+        }
+    }
+
+    /// Create an EstablishedEcies session using the other side's Curve25519
+    /// public key and an initial plaintext.
+    pub fn establish_outbound_channel(
+        &self,
+        their_public_key: Arc<Curve25519PublicKey>,
+        initial_plaintext: Vec<u8>,
+    ) -> Result<Arc<OutboundCreationResult>, VodozemacError> {
+        let ecies = self.inner.write().unwrap().take().ok_or_else(|| VodozemacError::Key(
+            "ECIES session has already been consumed".to_string(),
+        ))?;
+
+        let result = ecies.establish_outbound_channel(their_public_key.0, &initial_plaintext)?;
+
+        let established_ecies = Arc::new(EstablishedEcies {
+            inner: std::sync::Mutex::new(result.ecies),
+        });
+
+        let initial_message = Arc::new(InitialMessage {
+            inner: result.message,
+        });
+
+        Ok(Arc::new(OutboundCreationResult {
+            ecies: established_ecies,
+            message: initial_message,
+        }))
+    }
+
+    /// Create an EstablishedEcies from an InitialMessage encrypted by the other side.
+    pub fn establish_inbound_channel(
+        &self,
+        message: Arc<InitialMessage>,
+    ) -> Result<Arc<InboundCreationResult>, VodozemacError> {
+        let ecies = self.inner.write().unwrap().take().ok_or_else(|| VodozemacError::Key(
+            "ECIES session has already been consumed".to_string(),
+        ))?;
+
+        let result = ecies.establish_inbound_channel(&message.inner)?;
+
+        let established_ecies = Arc::new(EstablishedEcies {
+            inner: std::sync::Mutex::new(result.ecies),
+        });
+
+        Ok(Arc::new(InboundCreationResult {
+            ecies: established_ecies,
+            message: result.message,
+        }))
+    }
+}
+
+/// An established ECIES session.
+/// This session can be used to encrypt and decrypt messages between the two
+/// sides of the channel.
+#[derive(uniffi::Object, Debug)]
+pub struct EstablishedEcies {
+    inner: std::sync::Mutex<vodozemac::ecies::EstablishedEcies>,
+}
+
+#[uniffi::export]
+impl EstablishedEcies {
+    /// Get our Curve25519PublicKey.
+    /// This public key needs to be sent to the other side so that it can
+    /// complete the ECIES channel establishment.
+    pub fn public_key(&self) -> Arc<Curve25519PublicKey> {
+        let inner = self.inner.lock().unwrap();
+        Arc::new(Curve25519PublicKey::from(inner.public_key()))
+    }
+
+    /// Get the CheckCode which uniquely identifies this EstablishedEcies session.
+    /// This check code can be used to check that both sides of the session are
+    /// indeed using the same shared secret.
+    pub fn check_code(&self) -> Arc<CheckCode> {
+        let inner = self.inner.lock().unwrap();
+        Arc::new(CheckCode {
+            inner: inner.check_code().clone(),
+        })
+    }
+
+    /// Encrypt the given plaintext using this EstablishedEcies session.
+    pub fn encrypt(&self, plaintext: Vec<u8>) -> Result<Arc<Message>, VodozemacError> {
+        let mut inner = self.inner.lock().unwrap();
+        let message = inner.encrypt(&plaintext);
+        Ok(Arc::new(Message { inner: message }))
+    }
+
+    /// Decrypt the given message using this EstablishedEcies session.
+    pub fn decrypt(&self, message: Arc<Message>) -> Result<Vec<u8>, VodozemacError> {
+        let mut inner = self.inner.lock().unwrap();
+        let plaintext = inner.decrypt(&message.inner)?;
+        Ok(plaintext)
     }
 }
 

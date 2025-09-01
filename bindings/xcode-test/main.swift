@@ -675,5 +675,18 @@ func testEd25519Integration() {
     print("     SharedSecret: ✓ API available (requires ECDH for testing)")
 }
 
+func runEciesTestsSection() {
+    print("\n🔐 Testing ECIES (Elliptic Curve Integrated Encryption Scheme)...")
+    print("==================================================================")
+    
+    if runEciesTests() {
+        print("\n✅ All ECIES tests PASSED")
+    } else {
+        print("\n❌ Some ECIES tests FAILED")
+        exit(1)
+    }
+}
+
 // Run the tests
 runTests()
+runEciesTestsSection()

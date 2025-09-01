@@ -419,6 +419,22 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
+    typealias FfiType = UInt8
+    typealias SwiftType = UInt8
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt8 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: UInt8, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias FfiType = UInt64
     typealias SwiftType = UInt64
@@ -514,6 +530,151 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
         writeBytes(&buf, value)
     }
 }
+
+
+
+
+/**
+ * A check code that can be used to confirm that two EstablishedEcies
+ * objects share the same secret. This is supposed to be shared out-of-band to
+ * protect against active MITM attacks.
+ */
+public protocol CheckCodeProtocol: AnyObject, Sendable {
+    
+    /**
+     * Convert the check code to a Vec of two bytes.
+     * UniFFI doesn't support fixed arrays, so we return a Vec.
+     */
+    func asBytes()  -> Data
+    
+    /**
+     * Convert the check code to two base-10 numbers.
+     * The number should be displayed with a leading 0 in case the first digit is a 0.
+     */
+    func toDigit()  -> UInt8
+    
+}
+/**
+ * A check code that can be used to confirm that two EstablishedEcies
+ * objects share the same secret. This is supposed to be shared out-of-band to
+ * protect against active MITM attacks.
+ */
+open class CheckCode: CheckCodeProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_checkcode(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_checkcode(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Convert the check code to a Vec of two bytes.
+     * UniFFI doesn't support fixed arrays, so we return a Vec.
+     */
+open func asBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_checkcode_as_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Convert the check code to two base-10 numbers.
+     * The number should be displayed with a leading 0 in case the first digit is a 0.
+     */
+open func toDigit() -> UInt8  {
+    return try!  FfiConverterUInt8.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_checkcode_to_digit(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckCode: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = CheckCode
+
+    public static func lift(_ handle: UInt64) throws -> CheckCode {
+        return CheckCode(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: CheckCode) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckCode {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: CheckCode, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckCode_lift(_ handle: UInt64) throws -> CheckCode {
+    return try FfiConverterTypeCheckCode.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckCode_lower(_ value: CheckCode) -> UInt64 {
+    return FfiConverterTypeCheckCode.lower(value)
+}
+
+
 
 
 
@@ -911,6 +1072,187 @@ public func FfiConverterTypeCurve25519SecretKey_lift(_ handle: UInt64) throws ->
 #endif
 public func FfiConverterTypeCurve25519SecretKey_lower(_ value: Curve25519SecretKey) -> UInt64 {
     return FfiConverterTypeCurve25519SecretKey.lower(value)
+}
+
+
+
+
+
+
+/**
+ * An unestablished ECIES session.
+ */
+public protocol EciesProtocol: AnyObject, Sendable {
+    
+    /**
+     * Create an EstablishedEcies from an InitialMessage encrypted by the other side.
+     */
+    func establishInboundChannel(message: InitialMessage) throws  -> InboundCreationResult
+    
+    /**
+     * Create an EstablishedEcies session using the other side's Curve25519
+     * public key and an initial plaintext.
+     */
+    func establishOutboundChannel(theirPublicKey: Curve25519PublicKey, initialPlaintext: Data) throws  -> OutboundCreationResult
+    
+    /**
+     * Get our Curve25519PublicKey.
+     * This public key needs to be sent to the other side to establish an ECIES channel.
+     */
+    func publicKey() throws  -> Curve25519PublicKey
+    
+}
+/**
+ * An unestablished ECIES session.
+ */
+open class Ecies: EciesProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_ecies(self.handle, $0) }
+    }
+    /**
+     * Create a new, random, unestablished ECIES session.
+     * This method will use the `MATRIX_QR_CODE_LOGIN` info.
+     */
+public convenience init() {
+    let handle =
+        try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_ecies_new($0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_ecies(handle, $0) }
+    }
+
+    
+    /**
+     * Create a new, random, unestablished ECIES session with the given application info.
+     */
+public static func withInfo(info: String) -> Ecies  {
+    return try!  FfiConverterTypeEcies_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_ecies_with_info(
+        FfiConverterString.lower(info),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Create an EstablishedEcies from an InitialMessage encrypted by the other side.
+     */
+open func establishInboundChannel(message: InitialMessage)throws  -> InboundCreationResult  {
+    return try  FfiConverterTypeInboundCreationResult_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_ecies_establish_inbound_channel(self.uniffiCloneHandle(),
+        FfiConverterTypeInitialMessage_lower(message),$0
+    )
+})
+}
+    
+    /**
+     * Create an EstablishedEcies session using the other side's Curve25519
+     * public key and an initial plaintext.
+     */
+open func establishOutboundChannel(theirPublicKey: Curve25519PublicKey, initialPlaintext: Data)throws  -> OutboundCreationResult  {
+    return try  FfiConverterTypeOutboundCreationResult_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_ecies_establish_outbound_channel(self.uniffiCloneHandle(),
+        FfiConverterTypeCurve25519PublicKey_lower(theirPublicKey),
+        FfiConverterData.lower(initialPlaintext),$0
+    )
+})
+}
+    
+    /**
+     * Get our Curve25519PublicKey.
+     * This public key needs to be sent to the other side to establish an ECIES channel.
+     */
+open func publicKey()throws  -> Curve25519PublicKey  {
+    return try  FfiConverterTypeCurve25519PublicKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_ecies_public_key(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEcies: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = Ecies
+
+    public static func lift(_ handle: UInt64) throws -> Ecies {
+        return Ecies(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: Ecies) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Ecies {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: Ecies, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEcies_lift(_ handle: UInt64) throws -> Ecies {
+    return try FfiConverterTypeEcies.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEcies_lower(_ value: Ecies) -> UInt64 {
+    return FfiConverterTypeEcies.lower(value)
 }
 
 
@@ -1677,6 +2019,495 @@ public func FfiConverterTypeEd25519Signature_lower(_ value: Ed25519Signature) ->
 
 
 /**
+ * An established ECIES session.
+ * This session can be used to encrypt and decrypt messages between the two
+ * sides of the channel.
+ */
+public protocol EstablishedEciesProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the CheckCode which uniquely identifies this EstablishedEcies session.
+     * This check code can be used to check that both sides of the session are
+     * indeed using the same shared secret.
+     */
+    func checkCode()  -> CheckCode
+    
+    /**
+     * Decrypt the given message using this EstablishedEcies session.
+     */
+    func decrypt(message: Message) throws  -> Data
+    
+    /**
+     * Encrypt the given plaintext using this EstablishedEcies session.
+     */
+    func encrypt(plaintext: Data) throws  -> Message
+    
+    /**
+     * Get our Curve25519PublicKey.
+     * This public key needs to be sent to the other side so that it can
+     * complete the ECIES channel establishment.
+     */
+    func publicKey()  -> Curve25519PublicKey
+    
+}
+/**
+ * An established ECIES session.
+ * This session can be used to encrypt and decrypt messages between the two
+ * sides of the channel.
+ */
+open class EstablishedEcies: EstablishedEciesProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_establishedecies(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_establishedecies(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Get the CheckCode which uniquely identifies this EstablishedEcies session.
+     * This check code can be used to check that both sides of the session are
+     * indeed using the same shared secret.
+     */
+open func checkCode() -> CheckCode  {
+    return try!  FfiConverterTypeCheckCode_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_establishedecies_check_code(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Decrypt the given message using this EstablishedEcies session.
+     */
+open func decrypt(message: Message)throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_establishedecies_decrypt(self.uniffiCloneHandle(),
+        FfiConverterTypeMessage_lower(message),$0
+    )
+})
+}
+    
+    /**
+     * Encrypt the given plaintext using this EstablishedEcies session.
+     */
+open func encrypt(plaintext: Data)throws  -> Message  {
+    return try  FfiConverterTypeMessage_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_establishedecies_encrypt(self.uniffiCloneHandle(),
+        FfiConverterData.lower(plaintext),$0
+    )
+})
+}
+    
+    /**
+     * Get our Curve25519PublicKey.
+     * This public key needs to be sent to the other side so that it can
+     * complete the ECIES channel establishment.
+     */
+open func publicKey() -> Curve25519PublicKey  {
+    return try!  FfiConverterTypeCurve25519PublicKey_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_establishedecies_public_key(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEstablishedEcies: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = EstablishedEcies
+
+    public static func lift(_ handle: UInt64) throws -> EstablishedEcies {
+        return EstablishedEcies(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: EstablishedEcies) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EstablishedEcies {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: EstablishedEcies, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEstablishedEcies_lift(_ handle: UInt64) throws -> EstablishedEcies {
+    return try FfiConverterTypeEstablishedEcies.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEstablishedEcies_lower(_ value: EstablishedEcies) -> UInt64 {
+    return FfiConverterTypeEstablishedEcies.lower(value)
+}
+
+
+
+
+
+
+/**
+ * The result of an inbound ECIES channel establishment.
+ */
+public protocol InboundCreationResultProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the established ECIES channel.
+     */
+    func ecies()  -> EstablishedEcies
+    
+    /**
+     * Get the plaintext of the initial message.
+     */
+    func message()  -> Data
+    
+}
+/**
+ * The result of an inbound ECIES channel establishment.
+ */
+open class InboundCreationResult: InboundCreationResultProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_inboundcreationresult(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_inboundcreationresult(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Get the established ECIES channel.
+     */
+open func ecies() -> EstablishedEcies  {
+    return try!  FfiConverterTypeEstablishedEcies_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_inboundcreationresult_ecies(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the plaintext of the initial message.
+     */
+open func message() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_inboundcreationresult_message(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeInboundCreationResult: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = InboundCreationResult
+
+    public static func lift(_ handle: UInt64) throws -> InboundCreationResult {
+        return InboundCreationResult(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: InboundCreationResult) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> InboundCreationResult {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: InboundCreationResult, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInboundCreationResult_lift(_ handle: UInt64) throws -> InboundCreationResult {
+    return try FfiConverterTypeInboundCreationResult.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInboundCreationResult_lower(_ value: InboundCreationResult) -> UInt64 {
+    return FfiConverterTypeInboundCreationResult.lower(value)
+}
+
+
+
+
+
+
+/**
+ * The initial message, sent by the ECIES channel establisher.
+ * This message embeds the public key of the message creator allowing the other
+ * side to establish a channel using this message.
+ */
+public protocol InitialMessageProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the ciphertext of the initial message.
+     */
+    func ciphertext()  -> Data
+    
+    /**
+     * Encode the message as a string.
+     * The string will contain the base64-encoded Curve25519 public key and the
+     * ciphertext of the message separated by a `|`.
+     */
+    func encode()  -> String
+    
+    /**
+     * Get the ephemeral public key that was used to establish the ECIES channel.
+     */
+    func publicKey()  -> Curve25519PublicKey
+    
+}
+/**
+ * The initial message, sent by the ECIES channel establisher.
+ * This message embeds the public key of the message creator allowing the other
+ * side to establish a channel using this message.
+ */
+open class InitialMessage: InitialMessageProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_initialmessage(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_initialmessage(handle, $0) }
+    }
+
+    
+    /**
+     * Attempt to decode a string into an InitialMessage.
+     */
+public static func decode(message: String)throws  -> InitialMessage  {
+    return try  FfiConverterTypeInitialMessage_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_initialmessage_decode(
+        FfiConverterString.lower(message),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Get the ciphertext of the initial message.
+     */
+open func ciphertext() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_initialmessage_ciphertext(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Encode the message as a string.
+     * The string will contain the base64-encoded Curve25519 public key and the
+     * ciphertext of the message separated by a `|`.
+     */
+open func encode() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_initialmessage_encode(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the ephemeral public key that was used to establish the ECIES channel.
+     */
+open func publicKey() -> Curve25519PublicKey  {
+    return try!  FfiConverterTypeCurve25519PublicKey_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_initialmessage_public_key(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeInitialMessage: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = InitialMessage
+
+    public static func lift(_ handle: UInt64) throws -> InitialMessage {
+        return InitialMessage(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: InitialMessage) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> InitialMessage {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: InitialMessage, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInitialMessage_lift(_ handle: UInt64) throws -> InitialMessage {
+    return try FfiConverterTypeInitialMessage.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInitialMessage_lower(_ value: InitialMessage) -> UInt64 {
+    return FfiConverterTypeInitialMessage.lower(value)
+}
+
+
+
+
+
+
+/**
  * Key ID wrapper for UniFFI
  *
  * Pattern: Simple object with constructor and method
@@ -1812,6 +2643,293 @@ public func FfiConverterTypeKeyId_lift(_ handle: UInt64) throws -> KeyId {
 #endif
 public func FfiConverterTypeKeyId_lower(_ value: KeyId) -> UInt64 {
     return FfiConverterTypeKeyId.lower(value)
+}
+
+
+
+
+
+
+/**
+ * An encrypted message an EstablishedEcies channel has sent.
+ */
+public protocol MessageProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the ciphertext bytes.
+     */
+    func ciphertext()  -> Data
+    
+    /**
+     * Encode the message as a string.
+     * The ciphertext bytes will be encoded using unpadded base64.
+     */
+    func encode()  -> String
+    
+}
+/**
+ * An encrypted message an EstablishedEcies channel has sent.
+ */
+open class Message: MessageProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_message(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_message(handle, $0) }
+    }
+
+    
+    /**
+     * Attempt to decode a base64 string into a Message.
+     */
+public static func decode(message: String)throws  -> Message  {
+    return try  FfiConverterTypeMessage_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_message_decode(
+        FfiConverterString.lower(message),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Get the ciphertext bytes.
+     */
+open func ciphertext() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_message_ciphertext(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Encode the message as a string.
+     * The ciphertext bytes will be encoded using unpadded base64.
+     */
+open func encode() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_message_encode(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMessage: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = Message
+
+    public static func lift(_ handle: UInt64) throws -> Message {
+        return Message(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: Message) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Message {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: Message, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMessage_lift(_ handle: UInt64) throws -> Message {
+    return try FfiConverterTypeMessage.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMessage_lower(_ value: Message) -> UInt64 {
+    return FfiConverterTypeMessage.lower(value)
+}
+
+
+
+
+
+
+/**
+ * The result of an outbound ECIES channel establishment.
+ */
+public protocol OutboundCreationResultProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the established ECIES channel.
+     */
+    func ecies()  -> EstablishedEcies
+    
+    /**
+     * Get the initial message.
+     */
+    func message()  -> InitialMessage
+    
+}
+/**
+ * The result of an outbound ECIES channel establishment.
+ */
+open class OutboundCreationResult: OutboundCreationResultProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_outboundcreationresult(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_outboundcreationresult(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Get the established ECIES channel.
+     */
+open func ecies() -> EstablishedEcies  {
+    return try!  FfiConverterTypeEstablishedEcies_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_outboundcreationresult_ecies(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the initial message.
+     */
+open func message() -> InitialMessage  {
+    return try!  FfiConverterTypeInitialMessage_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_outboundcreationresult_message(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOutboundCreationResult: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = OutboundCreationResult
+
+    public static func lift(_ handle: UInt64) throws -> OutboundCreationResult {
+        return OutboundCreationResult(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: OutboundCreationResult) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OutboundCreationResult {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: OutboundCreationResult, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOutboundCreationResult_lift(_ handle: UInt64) throws -> OutboundCreationResult {
+    return try FfiConverterTypeOutboundCreationResult.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOutboundCreationResult_lower(_ value: OutboundCreationResult) -> UInt64 {
+    return FfiConverterTypeOutboundCreationResult.lower(value)
 }
 
 
@@ -2368,6 +3486,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_func_get_version() != 41157) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_method_checkcode_as_bytes() != 60996) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_checkcode_to_digit() != 44933) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_as_bytes() != 31053) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2384,6 +3508,15 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_curve25519secretkey_to_bytes() != 6874) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ecies_establish_inbound_channel() != 10409) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ecies_establish_outbound_channel() != 49028) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ecies_public_key() != 16617) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_ed25519keypair_public_key() != 59175) {
@@ -2419,7 +3552,46 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_method_ed25519signature_to_bytes() != 14918) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_method_establishedecies_check_code() != 18772) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_establishedecies_decrypt() != 17154) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_establishedecies_encrypt() != 23527) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_establishedecies_public_key() != 37246) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_inboundcreationresult_ecies() != 11349) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_inboundcreationresult_message() != 15609) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_initialmessage_ciphertext() != 7177) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_initialmessage_encode() != 28549) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_initialmessage_public_key() != 50433) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_method_keyid_to_base64() != 49710) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_message_ciphertext() != 8011) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_message_encode() != 47764) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_outboundcreationresult_ecies() != 10725) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_outboundcreationresult_message() != 48813) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_sharedsecret_as_bytes() != 9990) {
@@ -2446,6 +3618,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_constructor_curve25519secretkey_new() != 44920) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_constructor_ecies_new() != 28587) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_ecies_with_info() != 457) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_constructor_ed25519keypair_new() != 55338) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2470,7 +3648,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_constructor_ed25519signature_from_slice() != 57535) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_constructor_initialmessage_decode() != 17149) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_constructor_keyid_from_u64() != 55467) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_message_decode() != 46255) {
         return InitializationResult.apiChecksumMismatch
     }
 

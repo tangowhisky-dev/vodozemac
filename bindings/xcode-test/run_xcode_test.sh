@@ -52,6 +52,7 @@ cp "$GENERATED_DIR/vodozemac.swift" "$TEMP_DIR/"
 cp "$GENERATED_DIR/vodozemacFFI.h" "$TEMP_DIR/"
 cp "$GENERATED_DIR/vodozemacFFI.modulemap" "$TEMP_DIR/"
 cp "$SCRIPT_DIR/main.swift" "$TEMP_DIR/"
+cp "$SCRIPT_DIR/ecies_tests.swift" "$TEMP_DIR/"
 cp "$TARGET_DIR/libvodozemac_bindings.dylib" "$TEMP_DIR/"
 
 echo "🔨 Compiling Swift test program..."
@@ -64,7 +65,7 @@ swiftc -o vodozemac_test \
     -L . \
     -lvodozemac_bindings \
     -import-objc-header vodozemacFFI.h \
-    vodozemac.swift main.swift
+    vodozemac.swift main.swift ecies_tests.swift
 
 echo "✅ Compilation successful!"
 
