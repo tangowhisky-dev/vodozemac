@@ -359,8 +359,10 @@ func testEd25519Keypair() {
 func testEd25519PublicKey() {
     print("\n11. Testing Ed25519PublicKey struct...")
     
-    // Test 1: Create from valid bytes
-    let validBytes = Data((0..<32).map { _ in UInt8.random(in: 0...255) })
+    // Test 1: Create from valid bytes (generate a proper keypair first to get valid public key bytes)
+    let tempKeypair = Ed25519Keypair()
+    let tempPublicKey = tempKeypair.publicKey()
+    let validBytes = tempPublicKey.asBytes()  // These are guaranteed to be valid Ed25519 public key bytes
     
     do {
         let publicKey = try Ed25519PublicKey.fromSlice(bytes: validBytes)

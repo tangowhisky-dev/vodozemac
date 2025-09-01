@@ -9,7 +9,7 @@ func testEciesBasicChannelEstablishment() -> Bool {
         let bob = Ecies()
         
         // Test public key extraction
-        let alicePublicKey = try alice.publicKey()
+        let _ = try alice.publicKey()
         let bobPublicKey = try bob.publicKey()
         
         print("✓ ECIES sessions created successfully")
@@ -108,12 +108,15 @@ func testEciesEncryptionDecryption() -> Bool {
         
         print("✓ Bob->Alice encryption/decryption successful")
         
-        // Test message encoding/decoding
-        let encodedMessage = encryptedMessage.encode()
+        // Test message encoding/decoding with a fresh message to avoid nonce reuse
+        let testMessage = "Encoding test message".data(using: .utf8)!
+        let freshEncryptedMessage = try aliceChannel.encrypt(plaintext: testMessage)
+        
+        let encodedMessage = freshEncryptedMessage.encode()
         let decodedMessage = try Message.decode(message: encodedMessage)
         
         let reDecrypted = try bobChannel.decrypt(message: decodedMessage)
-        guard Data(reDecrypted) == aliceMessage else {
+        guard Data(reDecrypted) == testMessage else {
             print("✗ Message encoding/decoding failed")
             return false
         }
@@ -228,7 +231,7 @@ func testEciesCheckCodeProperties() -> Bool {
             initialPlaintext: plaintext
         )
         
-        let inboundResult = try bob.establishInboundChannel(message: outboundResult.message())
+        let _ = try bob.establishInboundChannel(message: outboundResult.message())
         
         let checkCode = outboundResult.ecies().checkCode()
         
