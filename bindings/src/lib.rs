@@ -95,18 +95,33 @@ fn get_version() -> String {
 
 // Wrapper implementations for cryptographic types
 
-/// Wrapper around vodozemac::KeyId
-pub struct KeyId(vodozemac::KeyId);
+// Wrapper implementations for cryptographic types
+// 
+// IMPORTANT: These use procedural macros (#[uniffi::export]) instead of UDL interfaces
+// to avoid UniFFI checksum mismatches. See UNIFFI_EXPANSION_GUIDE.md for details.
 
+/// Key ID wrapper for UniFFI
+/// 
+/// Pattern: Simple object with constructor and method
+#[derive(uniffi::Object)]
+pub struct KeyId(pub vodozemac::KeyId);
+
+#[uniffi::export]
 impl KeyId {
-    /// Create a KeyId from a u64 value
-    pub fn from_u64(value: u64) -> Self {
-        // KeyId is just a newtype wrapper around u64, so we can transmute safely
-        #[allow(clippy::missing_transmute_annotations)]
-        Self(unsafe { std::mem::transmute::<u64, vodozemac::KeyId>(value) })
+    /// Create a KeyId from a u64 value  
+    /// 
+    /// Pattern: Simple constructor returning Arc<Self>
+    #[uniffi::constructor]
+    pub fn from_u64(value: u64) -> std::sync::Arc<Self> {
+        // We need to manually construct a KeyId since the constructor is private
+        // Looking at the KeyId test, we can create it by manually constructing it
+        let key_id = unsafe { std::mem::transmute(value) };
+        std::sync::Arc::new(Self(key_id))
     }
 
-    /// Encode the KeyId as a base64 string
+    /// Convert the KeyId to a base64 string
+    /// 
+    /// Pattern: Simple method returning primitive type
     pub fn to_base64(&self) -> String {
         self.0.to_base64()
     }
@@ -119,49 +134,70 @@ impl From<vodozemac::KeyId> for KeyId {
 }
 
 /// Wrapper around vodozemac::Curve25519PublicKey
+/// 
+/// Pattern: Complex object with multiple constructors, error handling, and various return types
+#[derive(uniffi::Object)]
 pub struct Curve25519PublicKey(vodozemac::Curve25519PublicKey);
 
+#[uniffi::export]
 impl Curve25519PublicKey {
     /// Create a Curve25519PublicKey from a base64 string
-    pub fn from_base64(input: String) -> Result<Self, VodozemacError> {
+    /// 
+    /// Pattern: Fallible constructor with error handling
+    #[uniffi::constructor]
+    pub fn from_base64(input: String) -> Result<std::sync::Arc<Self>, VodozemacError> {
         let key = vodozemac::Curve25519PublicKey::from_base64(&input)
             .map_err(|e| VodozemacError::Key(e.to_string()))?;
-        Ok(Self(key))
+        Ok(std::sync::Arc::new(Self(key)))
     }
 
     /// Create a Curve25519PublicKey from a slice of bytes
-    pub fn from_slice(bytes: Vec<u8>) -> Result<Self, VodozemacError> {
+    /// 
+    /// Pattern: Fallible constructor with error handling
+    #[uniffi::constructor]
+    pub fn from_slice(bytes: Vec<u8>) -> Result<std::sync::Arc<Self>, VodozemacError> {
         let key = vodozemac::Curve25519PublicKey::from_slice(&bytes)
             .map_err(|e| VodozemacError::Key(e.to_string()))?;
-        Ok(Self(key))
+        Ok(std::sync::Arc::new(Self(key)))
     }
 
     /// Create a Curve25519PublicKey from exactly 32 bytes
-    pub fn from_bytes(bytes: Vec<u8>) -> Self {
+    /// 
+    /// Pattern: Infallible constructor (panics on invalid input)
+    #[uniffi::constructor]
+    pub fn from_bytes(bytes: Vec<u8>) -> std::sync::Arc<Self> {
         if bytes.len() != 32 {
             panic!("Curve25519PublicKey requires exactly 32 bytes");
         }
         let mut array = [0u8; 32];
         array.copy_from_slice(&bytes);
-        Self(vodozemac::Curve25519PublicKey::from_bytes(array))
+        std::sync::Arc::new(Self(vodozemac::Curve25519PublicKey::from_bytes(array)))
     }
 
     /// Convert the public key to bytes
+    /// 
+    /// Pattern: Method returning Vec<u8> (mapped to Swift Data)
     pub fn to_bytes(&self) -> Vec<u8> {
         self.0.to_bytes().to_vec()
     }
 
     /// View the public key as bytes
+    /// 
+    /// Pattern: Method returning Vec<u8> (mapped to Swift Data)
     pub fn as_bytes(&self) -> Vec<u8> {
         self.0.as_bytes().to_vec()
     }
 
     /// Convert the public key to a vector of bytes
+    /// 
+    /// Pattern: Method returning Vec<u8> (mapped to Swift Data)
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.to_vec()
     }
 
     /// Convert the public key to a base64 string
+    /// 
+    /// Pattern: Method returning primitive type (String)
     pub fn to_base64(&self) -> String {
         self.0.to_base64()
     }
@@ -180,30 +216,44 @@ impl From<&vodozemac::Curve25519PublicKey> for Curve25519PublicKey {
 }
 
 /// Wrapper around vodozemac::Curve25519SecretKey
+/// 
+/// Pattern: Object that returns other objects (demonstrates Arc<OtherObject> pattern)
+#[derive(uniffi::Object)]
 pub struct Curve25519SecretKey(vodozemac::Curve25519SecretKey);
 
+#[uniffi::export]
 impl Curve25519SecretKey {
     /// Generate a new random Curve25519SecretKey
-    pub fn new() -> Self {
-        Self(vodozemac::Curve25519SecretKey::new())
+    /// 
+    /// Pattern: Simple constructor with no parameters
+    #[uniffi::constructor]
+    pub fn new() -> std::sync::Arc<Self> {
+        std::sync::Arc::new(Self(vodozemac::Curve25519SecretKey::new()))
     }
 
     /// Create a Curve25519SecretKey from exactly 32 bytes
-    pub fn from_slice(bytes: Vec<u8>) -> Self {
+    /// 
+    /// Pattern: Constructor with validation (panics on invalid input)
+    #[uniffi::constructor]
+    pub fn from_slice(bytes: Vec<u8>) -> std::sync::Arc<Self> {
         if bytes.len() != 32 {
             panic!("Curve25519SecretKey requires exactly 32 bytes");
         }
         let mut array = [0u8; 32];
         array.copy_from_slice(&bytes);
-        Self(vodozemac::Curve25519SecretKey::from_slice(&array))
+        std::sync::Arc::new(Self(vodozemac::Curve25519SecretKey::from_slice(&array)))
     }
 
     /// Convert the secret key to bytes
+    /// 
+    /// Pattern: Method returning Vec<u8>
     pub fn to_bytes(&self) -> Vec<u8> {
         self.0.to_bytes().to_vec()
     }
 
     /// Get the public key that corresponds to this secret key
+    /// 
+    /// Pattern: Method returning Arc<AnotherObject> - CRITICAL for UniFFI
     pub fn public_key(&self) -> std::sync::Arc<Curve25519PublicKey> {
         std::sync::Arc::new(Curve25519PublicKey(vodozemac::Curve25519PublicKey::from(&self.0)))
     }
@@ -212,12 +262,6 @@ impl Curve25519SecretKey {
 impl From<vodozemac::Curve25519SecretKey> for Curve25519SecretKey {
     fn from(key: vodozemac::Curve25519SecretKey) -> Self {
         Self(key)
-    }
-}
-
-impl Default for Curve25519SecretKey {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

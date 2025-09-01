@@ -81,7 +81,7 @@ func testCryptographicTypes() {
     
     // Test 7: Curve25519SecretKey from bytes
     print("\\n7️⃣ Testing Curve25519SecretKey from bytes...")
-    let testSecretBytes = Array(repeating: UInt8(42), count: 32)
+    let testSecretBytes = Data(repeating: 42, count: 32)
     let secretFromBytes = Curve25519SecretKey.fromSlice(bytes: testSecretBytes)
     let recoveredBytes = secretFromBytes.toBytes()
     print("   ✅ Created secret key from known bytes")
@@ -96,7 +96,7 @@ func testCryptographicTypes() {
     
     // Test 9: Curve25519PublicKey from bytes
     print("\\n9️⃣ Testing Curve25519PublicKey from bytes...")
-    let testPublicBytes = Array(repeating: UInt8(100), count: 32)
+    let testPublicBytes = Data(repeating: 100, count: 32)
     let publicFromBytes = Curve25519PublicKey.fromBytes(bytes: testPublicBytes)
     let recoveredPublicBytes = publicFromBytes.toBytes()
     print("   ✅ Created public key from known bytes")

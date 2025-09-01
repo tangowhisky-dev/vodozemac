@@ -419,22 +419,6 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
-    typealias FfiType = UInt8
-    typealias SwiftType = UInt8
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt8 {
-        return try lift(readInt(&buf))
-    }
-
-    public static func write(_ value: UInt8, into buf: inout [UInt8]) {
-        writeInt(&buf, lower(value))
-    }
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
 fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias FfiType = UInt64
     typealias SwiftType = UInt64
@@ -489,20 +473,68 @@ fileprivate struct FfiConverterString: FfiConverter {
     }
 }
 
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
+    typealias SwiftType = Data
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+        let len: Int32 = try readInt(&buf)
+        return Data(try readBytes(&buf, count: Int(len)))
+    }
+
+    public static func write(_ value: Data, into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        writeBytes(&buf, value)
+    }
+}
 
 
 
+
+/**
+ * Wrapper around vodozemac::Curve25519PublicKey
+ *
+ * Pattern: Complex object with multiple constructors, error handling, and various return types
+ */
 public protocol Curve25519PublicKeyProtocol: AnyObject, Sendable {
     
-    func asBytes()  -> [UInt8]
+    /**
+     * View the public key as bytes
+     *
+     * Pattern: Method returning Vec<u8> (mapped to Swift Data)
+     */
+    func asBytes()  -> Data
     
+    /**
+     * Convert the public key to a base64 string
+     *
+     * Pattern: Method returning primitive type (String)
+     */
     func toBase64()  -> String
     
-    func toBytes()  -> [UInt8]
+    /**
+     * Convert the public key to bytes
+     *
+     * Pattern: Method returning Vec<u8> (mapped to Swift Data)
+     */
+    func toBytes()  -> Data
     
-    func toVec()  -> [UInt8]
+    /**
+     * Convert the public key to a vector of bytes
+     *
+     * Pattern: Method returning Vec<u8> (mapped to Swift Data)
+     */
+    func toVec()  -> Data
     
 }
+/**
+ * Wrapper around vodozemac::Curve25519PublicKey
+ *
+ * Pattern: Complex object with multiple constructors, error handling, and various return types
+ */
 open class Curve25519PublicKey: Curve25519PublicKeyProtocol, @unchecked Sendable {
     fileprivate let handle: UInt64
 
@@ -549,6 +581,11 @@ open class Curve25519PublicKey: Curve25519PublicKeyProtocol, @unchecked Sendable
     }
 
     
+    /**
+     * Create a Curve25519PublicKey from a base64 string
+     *
+     * Pattern: Fallible constructor with error handling
+     */
 public static func fromBase64(input: String)throws  -> Curve25519PublicKey  {
     return try  FfiConverterTypeCurve25519PublicKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
     uniffi_vodozemac_bindings_fn_constructor_curve25519publickey_from_base64(
@@ -557,31 +594,51 @@ public static func fromBase64(input: String)throws  -> Curve25519PublicKey  {
 })
 }
     
-public static func fromBytes(bytes: [UInt8]) -> Curve25519PublicKey  {
+    /**
+     * Create a Curve25519PublicKey from exactly 32 bytes
+     *
+     * Pattern: Infallible constructor (panics on invalid input)
+     */
+public static func fromBytes(bytes: Data) -> Curve25519PublicKey  {
     return try!  FfiConverterTypeCurve25519PublicKey_lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_constructor_curve25519publickey_from_bytes(
-        FfiConverterSequenceUInt8.lower(bytes),$0
+        FfiConverterData.lower(bytes),$0
     )
 })
 }
     
-public static func fromSlice(bytes: [UInt8])throws  -> Curve25519PublicKey  {
+    /**
+     * Create a Curve25519PublicKey from a slice of bytes
+     *
+     * Pattern: Fallible constructor with error handling
+     */
+public static func fromSlice(bytes: Data)throws  -> Curve25519PublicKey  {
     return try  FfiConverterTypeCurve25519PublicKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
     uniffi_vodozemac_bindings_fn_constructor_curve25519publickey_from_slice(
-        FfiConverterSequenceUInt8.lower(bytes),$0
+        FfiConverterData.lower(bytes),$0
     )
 })
 }
     
 
     
-open func asBytes() -> [UInt8]  {
-    return try!  FfiConverterSequenceUInt8.lift(try! rustCall() {
+    /**
+     * View the public key as bytes
+     *
+     * Pattern: Method returning Vec<u8> (mapped to Swift Data)
+     */
+open func asBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_method_curve25519publickey_as_bytes(self.uniffiCloneHandle(),$0
     )
 })
 }
     
+    /**
+     * Convert the public key to a base64 string
+     *
+     * Pattern: Method returning primitive type (String)
+     */
 open func toBase64() -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_method_curve25519publickey_to_base64(self.uniffiCloneHandle(),$0
@@ -589,15 +646,25 @@ open func toBase64() -> String  {
 })
 }
     
-open func toBytes() -> [UInt8]  {
-    return try!  FfiConverterSequenceUInt8.lift(try! rustCall() {
+    /**
+     * Convert the public key to bytes
+     *
+     * Pattern: Method returning Vec<u8> (mapped to Swift Data)
+     */
+open func toBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_method_curve25519publickey_to_bytes(self.uniffiCloneHandle(),$0
     )
 })
 }
     
-open func toVec() -> [UInt8]  {
-    return try!  FfiConverterSequenceUInt8.lift(try! rustCall() {
+    /**
+     * Convert the public key to a vector of bytes
+     *
+     * Pattern: Method returning Vec<u8> (mapped to Swift Data)
+     */
+open func toVec() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_method_curve25519publickey_to_vec(self.uniffiCloneHandle(),$0
     )
 })
@@ -653,13 +720,33 @@ public func FfiConverterTypeCurve25519PublicKey_lower(_ value: Curve25519PublicK
 
 
 
+/**
+ * Wrapper around vodozemac::Curve25519SecretKey
+ *
+ * Pattern: Object that returns other objects (demonstrates Arc<OtherObject> pattern)
+ */
 public protocol Curve25519SecretKeyProtocol: AnyObject, Sendable {
     
+    /**
+     * Get the public key that corresponds to this secret key
+     *
+     * Pattern: Method returning Arc<AnotherObject> - CRITICAL for UniFFI
+     */
     func publicKey()  -> Curve25519PublicKey
     
-    func toBytes()  -> [UInt8]
+    /**
+     * Convert the secret key to bytes
+     *
+     * Pattern: Method returning Vec<u8>
+     */
+    func toBytes()  -> Data
     
 }
+/**
+ * Wrapper around vodozemac::Curve25519SecretKey
+ *
+ * Pattern: Object that returns other objects (demonstrates Arc<OtherObject> pattern)
+ */
 open class Curve25519SecretKey: Curve25519SecretKeyProtocol, @unchecked Sendable {
     fileprivate let handle: UInt64
 
@@ -699,6 +786,11 @@ open class Curve25519SecretKey: Curve25519SecretKeyProtocol, @unchecked Sendable
     public func uniffiCloneHandle() -> UInt64 {
         return try! rustCall { uniffi_vodozemac_bindings_fn_clone_curve25519secretkey(self.handle, $0) }
     }
+    /**
+     * Generate a new random Curve25519SecretKey
+     *
+     * Pattern: Simple constructor with no parameters
+     */
 public convenience init() {
     let handle =
         try! rustCall() {
@@ -713,16 +805,26 @@ public convenience init() {
     }
 
     
-public static func fromSlice(bytes: [UInt8]) -> Curve25519SecretKey  {
+    /**
+     * Create a Curve25519SecretKey from exactly 32 bytes
+     *
+     * Pattern: Constructor with validation (panics on invalid input)
+     */
+public static func fromSlice(bytes: Data) -> Curve25519SecretKey  {
     return try!  FfiConverterTypeCurve25519SecretKey_lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_constructor_curve25519secretkey_from_slice(
-        FfiConverterSequenceUInt8.lower(bytes),$0
+        FfiConverterData.lower(bytes),$0
     )
 })
 }
     
 
     
+    /**
+     * Get the public key that corresponds to this secret key
+     *
+     * Pattern: Method returning Arc<AnotherObject> - CRITICAL for UniFFI
+     */
 open func publicKey() -> Curve25519PublicKey  {
     return try!  FfiConverterTypeCurve25519PublicKey_lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_method_curve25519secretkey_public_key(self.uniffiCloneHandle(),$0
@@ -730,8 +832,13 @@ open func publicKey() -> Curve25519PublicKey  {
 })
 }
     
-open func toBytes() -> [UInt8]  {
-    return try!  FfiConverterSequenceUInt8.lift(try! rustCall() {
+    /**
+     * Convert the secret key to bytes
+     *
+     * Pattern: Method returning Vec<u8>
+     */
+open func toBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_method_curve25519secretkey_to_bytes(self.uniffiCloneHandle(),$0
     )
 })
@@ -787,11 +894,26 @@ public func FfiConverterTypeCurve25519SecretKey_lower(_ value: Curve25519SecretK
 
 
 
+/**
+ * Key ID wrapper for UniFFI
+ *
+ * Pattern: Simple object with constructor and method
+ */
 public protocol KeyIdProtocol: AnyObject, Sendable {
     
+    /**
+     * Convert the KeyId to a base64 string
+     *
+     * Pattern: Simple method returning primitive type
+     */
     func toBase64()  -> String
     
 }
+/**
+ * Key ID wrapper for UniFFI
+ *
+ * Pattern: Simple object with constructor and method
+ */
 open class KeyId: KeyIdProtocol, @unchecked Sendable {
     fileprivate let handle: UInt64
 
@@ -838,6 +960,11 @@ open class KeyId: KeyIdProtocol, @unchecked Sendable {
     }
 
     
+    /**
+     * Create a KeyId from a u64 value
+     *
+     * Pattern: Simple constructor returning Arc<Self>
+     */
 public static func fromU64(value: UInt64) -> KeyId  {
     return try!  FfiConverterTypeKeyId_lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_constructor_keyid_from_u64(
@@ -848,6 +975,11 @@ public static func fromU64(value: UInt64) -> KeyId  {
     
 
     
+    /**
+     * Convert the KeyId to a base64 string
+     *
+     * Pattern: Simple method returning primitive type
+     */
 open func toBase64() -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_method_keyid_to_base64(self.uniffiCloneHandle(),$0
@@ -1235,42 +1367,17 @@ extension VodozemacError: Foundation.LocalizedError {
 
 
 
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-fileprivate struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
-    typealias SwiftType = [UInt8]
-
-    public static func write(_ value: [UInt8], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterUInt8.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UInt8] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [UInt8]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            seq.append(try FfiConverterUInt8.read(from: &buf))
-        }
-        return seq
-    }
-}
-public func base64Decode(input: String)throws  -> [UInt8]  {
-    return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+public func base64Decode(input: String)throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
     uniffi_vodozemac_bindings_fn_func_base64_decode(
         FfiConverterString.lower(input),$0
     )
 })
 }
-public func base64Encode(input: [UInt8]) -> String  {
+public func base64Encode(input: Data) -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_func_base64_encode(
-        FfiConverterSequenceUInt8.lower(input),$0
+        FfiConverterData.lower(input),$0
     )
 })
 }
@@ -1296,54 +1403,52 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_func_base64_decode() != 56210) {
+    if (uniffi_vodozemac_bindings_checksum_func_base64_decode() != 3805) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_func_base64_encode() != 3129) {
+    if (uniffi_vodozemac_bindings_checksum_func_base64_encode() != 38810) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_func_get_version() != 41157) {
         return InitializationResult.apiChecksumMismatch
     }
-
-    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_as_bytes() != 34319) {
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_as_bytes() != 31053) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_to_base64() != 31198) {
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_to_base64() != 25568) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_to_bytes() != 39226) {
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_to_bytes() != 51368) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_to_vec() != 12626) {
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_to_vec() != 30420) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_method_curve25519secretkey_public_key() != 12522) {
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519secretkey_public_key() != 57764) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_method_curve25519secretkey_to_bytes() != 34690) {
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519secretkey_to_bytes() != 6874) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_method_keyid_to_base64() != 24501) {
+    if (uniffi_vodozemac_bindings_checksum_method_keyid_to_base64() != 49710) {
         return InitializationResult.apiChecksumMismatch
     }
-
-    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519publickey_from_base64() != 57202) {
+    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519publickey_from_base64() != 44436) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519publickey_from_bytes() != 12964) {
+    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519publickey_from_bytes() != 14862) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519publickey_from_slice() != 19949) {
+    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519publickey_from_slice() != 37334) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519secretkey_from_slice() != 51348) {
+    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519secretkey_from_slice() != 4143) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519secretkey_new() != 53629) {
+    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519secretkey_new() != 44920) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_constructor_keyid_from_u64() != 36462) {
+    if (uniffi_vodozemac_bindings_checksum_constructor_keyid_from_u64() != 55467) {
         return InitializationResult.apiChecksumMismatch
     }
 

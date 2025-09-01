@@ -1,26 +1,98 @@
-# Vodozemac Swift Bindings - Comprehensive Error Types Implementation
+# Vodozemac Swift Bindings - Expanded API Implementation
 
 ## 🎉 Implementation Complete!
 
-I have successfully expanded the vodozemac Swift bindings to include comprehensive error types and enums as requested. Here's what has been accomplished:
+I have successfully expanded the vodozemac Swift bindings to include comprehensive error types, enums, and **three new cryptographic object types** as requested. Here's what has been accomplished:
 
 ## ✅ New Features Implemented
 
-### 1. Unified Error Handling
+### 1. New Cryptographic Types (MAJOR ADDITION)
+- **KeyId** - Key identifier with base64 conversion
+  - `fromU64(value:)` constructor
+  - `toBase64()` method
+- **Curve25519PublicKey** - Elliptic curve public key operations
+  - `fromBase64(input:)` constructor (with error handling)
+  - `fromSlice(bytes:)` constructor (with error handling)  
+  - `fromBytes(bytes:)` constructor
+  - `asBytes()`, `toBytes()`, `toVec()`, `toBase64()` methods
+- **Curve25519SecretKey** - Elliptic curve secret key operations
+  - `init()` constructor (generates new key)
+  - `fromSlice(bytes:)` constructor
+  - `toBytes()` method
+  - `publicKey()` method returning corresponding public key
+
+### 2. Unified Error Handling
 - **VodozemacError enum** with 14 comprehensive error variants:
   - Base64Decode, ProtoBufDecode, Decode, DehydratedDevice
   - Key, LibolmPickle, Pickle, Signature  
   - Ecies, MegolmDecryption, OlmDecryption
   - SessionCreation, SessionKeyDecode, Sas
 
-### 2. Enhanced Enums  
+### 3. Enhanced Enums  
 - **MessageType**: `normal`, `preKey` (represents Olm message types)
 - **SessionOrdering**: `equal`, `better`, `worse`, `unconnected` (session comparison results)
 
-### 3. Improved Error Handling
+### 4. Improved Error Handling
 - Functions now use Swift's native `throws` syntax
 - Proper Result-based error handling for all fallible operations
 - Detailed error messages with context from underlying vodozemac errors
+
+## 🔧 Technical Breakthrough: Procedural Macros
+
+### The Problem
+Initial implementation using UDL interfaces caused **UniFFI checksum mismatches**:
+```
+UniFFI API checksum mismatch: try cleaning and rebuilding your project
+```
+
+### The Solution  
+Switched from UDL interfaces to **procedural macros** for complex objects:
+
+**Before (UDL approach - FAILED)**:
+```udl
+interface Curve25519PublicKey {
+    bytes as_bytes();
+    string to_base64();
+}
+```
+
+**After (Procedural macros - SUCCESS)**:
+```rust
+#[derive(uniffi::Object)]
+pub struct Curve25519PublicKey(vodozemac::Curve25519PublicKey);
+
+#[uniffi::export]
+impl Curve25519PublicKey {
+    pub fn as_bytes(&self) -> Vec<u8> { /* ... */ }
+    pub fn to_base64(&self) -> String { /* ... */ }
+}
+```
+
+### Why This Works
+- UniFFI procedural macros generate exact scaffolding signatures
+- Eliminates signature mismatches between UDL, Rust impl, and generated bindings
+- Automatic Arc wrapping and checksum calculation
+- Perfect compatibility with UniFFI's validation system
+
+## 📁 Files Modified
+
+### Core Implementation  
+- `src/vodozemac.udl` - **CHANGED APPROACH**: Removed interface definitions, kept enums/errors
+- `src/lib.rs` - **MAJOR REWRITE**: Implemented all three types using procedural macros
+- `Cargo.toml` - Added thiserror dependency for proper error handling
+
+### Generated Bindings
+- `generated/vodozemac.swift` - Regenerated with all new cryptographic types
+- Contract version fixed from 30 to 29 for compatibility
+
+### Testing
+- `test_bindings.swift` - **NEW**: Comprehensive test covering all new types
+- `xcode-test/run_xcode_test.sh` - Enhanced test runner
+
+### Documentation (**NEW**)
+- `README.md` - **NEW**: Complete usage guide and architecture overview
+- `UNIFFI_EXPANSION_GUIDE.md` - **NEW**: Technical deep-dive on the checksum solution
+- `IMPLEMENTATION_SUMMARY.md` - **UPDATED**: This file with breakthrough details
 
 ## 📁 Files Modified
 
