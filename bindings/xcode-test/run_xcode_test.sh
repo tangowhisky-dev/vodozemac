@@ -12,7 +12,7 @@ echo "======================================================="
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BINDINGS_DIR="$(dirname "$SCRIPT_DIR")"
 GENERATED_DIR="$BINDINGS_DIR/generated"
-TARGET_DIR="$BINDINGS_DIR/../target/release"
+TARGET_DIR="$BINDINGS_DIR/../target/debug"
 
 # Check prerequisites
 echo "🔍 Checking prerequisites..."

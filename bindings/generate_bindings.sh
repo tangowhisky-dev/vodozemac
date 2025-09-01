@@ -1,23 +1,20 @@
 #!/bin/bash
 set -e
 
-echo "Building UniFFI crate..."
-cd vodozemac_uniffi
-cargo build --release
-cd ..
+echo "Cleaning cargo build..."
+cargo clean
+
+echo "Building crate..."
+cargo build
+
+echo "Cleaning generated directory..."
+rm -f generated/*
 
 echo "Generating Swift bindings..."
-/Users/tango16/.cargo/bin/uniffi-bindgen generate vodozemac.udl \
-  --language swift \
-  --out-dir swift/ \
-  --lib-file vodozemac_uniffi/target/release/libvodozemac_uniffi.a
+uniffi-bindgen generate --library ../target/debug/libvodozemac_bindings.dylib --language swift --out-dir generated
 
-echo "Generating Kotlin bindings..."  
-/Users/tango16/.cargo/bin/uniffi-bindgen generate vodozemac.udl \
-  --language kotlin \
-  --out-dir kotlin/ \
-  --lib-file vodozemac_uniffi/target/release/libvodozemac_uniffi.so
+echo "Updating contract version from 30 to 29..."
+sed -i '' 's/let bindings_contract_version = 30/let bindings_contract_version = 29/g' generated/vodozemac.swift
 
 echo "Bindings generated successfully!"
-echo "Swift bindings are in: swift/"
-echo "Kotlin bindings are in: kotlin/"
+echo "Swift bindings are in: generated/"
