@@ -435,6 +435,22 @@ fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
+    typealias FfiType = UInt64
+    typealias SwiftType = UInt64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -472,6 +488,419 @@ fileprivate struct FfiConverterString: FfiConverter {
         writeBytes(&buf, value.utf8)
     }
 }
+
+
+
+
+public protocol Curve25519PublicKeyProtocol: AnyObject, Sendable {
+    
+    func asBytes()  -> [UInt8]
+    
+    func toBase64()  -> String
+    
+    func toBytes()  -> [UInt8]
+    
+    func toVec()  -> [UInt8]
+    
+}
+open class Curve25519PublicKey: Curve25519PublicKeyProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_curve25519publickey(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_curve25519publickey(handle, $0) }
+    }
+
+    
+public static func fromBase64(input: String)throws  -> Curve25519PublicKey  {
+    return try  FfiConverterTypeCurve25519PublicKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_curve25519publickey_from_base64(
+        FfiConverterString.lower(input),$0
+    )
+})
+}
+    
+public static func fromBytes(bytes: [UInt8]) -> Curve25519PublicKey  {
+    return try!  FfiConverterTypeCurve25519PublicKey_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_curve25519publickey_from_bytes(
+        FfiConverterSequenceUInt8.lower(bytes),$0
+    )
+})
+}
+    
+public static func fromSlice(bytes: [UInt8])throws  -> Curve25519PublicKey  {
+    return try  FfiConverterTypeCurve25519PublicKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_curve25519publickey_from_slice(
+        FfiConverterSequenceUInt8.lower(bytes),$0
+    )
+})
+}
+    
+
+    
+open func asBytes() -> [UInt8]  {
+    return try!  FfiConverterSequenceUInt8.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_curve25519publickey_as_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func toBase64() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_curve25519publickey_to_base64(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func toBytes() -> [UInt8]  {
+    return try!  FfiConverterSequenceUInt8.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_curve25519publickey_to_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func toVec() -> [UInt8]  {
+    return try!  FfiConverterSequenceUInt8.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_curve25519publickey_to_vec(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCurve25519PublicKey: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = Curve25519PublicKey
+
+    public static func lift(_ handle: UInt64) throws -> Curve25519PublicKey {
+        return Curve25519PublicKey(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: Curve25519PublicKey) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Curve25519PublicKey {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: Curve25519PublicKey, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCurve25519PublicKey_lift(_ handle: UInt64) throws -> Curve25519PublicKey {
+    return try FfiConverterTypeCurve25519PublicKey.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCurve25519PublicKey_lower(_ value: Curve25519PublicKey) -> UInt64 {
+    return FfiConverterTypeCurve25519PublicKey.lower(value)
+}
+
+
+
+
+
+
+public protocol Curve25519SecretKeyProtocol: AnyObject, Sendable {
+    
+    func publicKey()  -> Curve25519PublicKey
+    
+    func toBytes()  -> [UInt8]
+    
+}
+open class Curve25519SecretKey: Curve25519SecretKeyProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_curve25519secretkey(self.handle, $0) }
+    }
+public convenience init() {
+    let handle =
+        try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_curve25519secretkey_new($0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_curve25519secretkey(handle, $0) }
+    }
+
+    
+public static func fromSlice(bytes: [UInt8]) -> Curve25519SecretKey  {
+    return try!  FfiConverterTypeCurve25519SecretKey_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_curve25519secretkey_from_slice(
+        FfiConverterSequenceUInt8.lower(bytes),$0
+    )
+})
+}
+    
+
+    
+open func publicKey() -> Curve25519PublicKey  {
+    return try!  FfiConverterTypeCurve25519PublicKey_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_curve25519secretkey_public_key(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func toBytes() -> [UInt8]  {
+    return try!  FfiConverterSequenceUInt8.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_curve25519secretkey_to_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCurve25519SecretKey: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = Curve25519SecretKey
+
+    public static func lift(_ handle: UInt64) throws -> Curve25519SecretKey {
+        return Curve25519SecretKey(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: Curve25519SecretKey) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Curve25519SecretKey {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: Curve25519SecretKey, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCurve25519SecretKey_lift(_ handle: UInt64) throws -> Curve25519SecretKey {
+    return try FfiConverterTypeCurve25519SecretKey.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCurve25519SecretKey_lower(_ value: Curve25519SecretKey) -> UInt64 {
+    return FfiConverterTypeCurve25519SecretKey.lower(value)
+}
+
+
+
+
+
+
+public protocol KeyIdProtocol: AnyObject, Sendable {
+    
+    func toBase64()  -> String
+    
+}
+open class KeyId: KeyIdProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_keyid(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_keyid(handle, $0) }
+    }
+
+    
+public static func fromU64(value: UInt64) -> KeyId  {
+    return try!  FfiConverterTypeKeyId_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_keyid_from_u64(
+        FfiConverterUInt64.lower(value),$0
+    )
+})
+}
+    
+
+    
+open func toBase64() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_keyid_to_base64(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeKeyId: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = KeyId
+
+    public static func lift(_ handle: UInt64) throws -> KeyId {
+        return KeyId(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: KeyId) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeyId {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: KeyId, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeyId_lift(_ handle: UInt64) throws -> KeyId {
+    return try FfiConverterTypeKeyId.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeyId_lower(_ value: KeyId) -> UInt64 {
+    return FfiConverterTypeKeyId.lower(value)
+}
+
+
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -874,6 +1303,47 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_func_get_version() != 41157) {
+        return InitializationResult.apiChecksumMismatch
+    }
+
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_as_bytes() != 34319) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_to_base64() != 31198) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_to_bytes() != 39226) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_to_vec() != 12626) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519secretkey_public_key() != 12522) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519secretkey_to_bytes() != 34690) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_keyid_to_base64() != 24501) {
+        return InitializationResult.apiChecksumMismatch
+    }
+
+    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519publickey_from_base64() != 57202) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519publickey_from_bytes() != 12964) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519publickey_from_slice() != 19949) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519secretkey_from_slice() != 51348) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_curve25519secretkey_new() != 53629) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_keyid_from_u64() != 36462) {
         return InitializationResult.apiChecksumMismatch
     }
 

@@ -39,3 +39,35 @@ enum SessionOrdering {
     "Worse", 
     "Unconnected",
 };
+
+// Key ID struct
+interface KeyId {
+    [Name=from_u64]
+    constructor(u64 value);
+    string to_base64();
+};
+
+// Curve25519 Public Key
+interface Curve25519PublicKey {
+    [Throws=VodozemacError, Name=from_base64]
+    constructor(string input);
+    [Throws=VodozemacError, Name=from_slice]
+    constructor(sequence<u8> bytes);
+    [Name=from_bytes]
+    constructor(sequence<u8> bytes);
+    
+    sequence<u8> to_bytes();
+    sequence<u8> as_bytes();
+    sequence<u8> to_vec();
+    string to_base64();
+};
+
+// Curve25519 Secret Key
+interface Curve25519SecretKey {
+    constructor();
+    [Name=from_slice]
+    constructor(sequence<u8> bytes);
+    
+    sequence<u8> to_bytes();
+    Curve25519PublicKey public_key();
+};

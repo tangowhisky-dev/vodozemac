@@ -93,6 +93,134 @@ fn get_version() -> String {
     VZ_VERSION.to_string()
 }
 
+// Wrapper implementations for cryptographic types
+
+/// Wrapper around vodozemac::KeyId
+pub struct KeyId(vodozemac::KeyId);
+
+impl KeyId {
+    /// Create a KeyId from a u64 value
+    pub fn from_u64(value: u64) -> Self {
+        // KeyId is just a newtype wrapper around u64, so we can transmute safely
+        #[allow(clippy::missing_transmute_annotations)]
+        Self(unsafe { std::mem::transmute::<u64, vodozemac::KeyId>(value) })
+    }
+
+    /// Encode the KeyId as a base64 string
+    pub fn to_base64(&self) -> String {
+        self.0.to_base64()
+    }
+}
+
+impl From<vodozemac::KeyId> for KeyId {
+    fn from(key_id: vodozemac::KeyId) -> Self {
+        Self(key_id)
+    }
+}
+
+/// Wrapper around vodozemac::Curve25519PublicKey
+pub struct Curve25519PublicKey(vodozemac::Curve25519PublicKey);
+
+impl Curve25519PublicKey {
+    /// Create a Curve25519PublicKey from a base64 string
+    pub fn from_base64(input: String) -> Result<Self, VodozemacError> {
+        let key = vodozemac::Curve25519PublicKey::from_base64(&input)
+            .map_err(|e| VodozemacError::Key(e.to_string()))?;
+        Ok(Self(key))
+    }
+
+    /// Create a Curve25519PublicKey from a slice of bytes
+    pub fn from_slice(bytes: Vec<u8>) -> Result<Self, VodozemacError> {
+        let key = vodozemac::Curve25519PublicKey::from_slice(&bytes)
+            .map_err(|e| VodozemacError::Key(e.to_string()))?;
+        Ok(Self(key))
+    }
+
+    /// Create a Curve25519PublicKey from exactly 32 bytes
+    pub fn from_bytes(bytes: Vec<u8>) -> Self {
+        if bytes.len() != 32 {
+            panic!("Curve25519PublicKey requires exactly 32 bytes");
+        }
+        let mut array = [0u8; 32];
+        array.copy_from_slice(&bytes);
+        Self(vodozemac::Curve25519PublicKey::from_bytes(array))
+    }
+
+    /// Convert the public key to bytes
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_bytes().to_vec()
+    }
+
+    /// View the public key as bytes
+    pub fn as_bytes(&self) -> Vec<u8> {
+        self.0.as_bytes().to_vec()
+    }
+
+    /// Convert the public key to a vector of bytes
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
+
+    /// Convert the public key to a base64 string
+    pub fn to_base64(&self) -> String {
+        self.0.to_base64()
+    }
+}
+
+impl From<vodozemac::Curve25519PublicKey> for Curve25519PublicKey {
+    fn from(key: vodozemac::Curve25519PublicKey) -> Self {
+        Self(key)
+    }
+}
+
+impl From<&vodozemac::Curve25519PublicKey> for Curve25519PublicKey {
+    fn from(key: &vodozemac::Curve25519PublicKey) -> Self {
+        Self(*key)
+    }
+}
+
+/// Wrapper around vodozemac::Curve25519SecretKey
+pub struct Curve25519SecretKey(vodozemac::Curve25519SecretKey);
+
+impl Curve25519SecretKey {
+    /// Generate a new random Curve25519SecretKey
+    pub fn new() -> Self {
+        Self(vodozemac::Curve25519SecretKey::new())
+    }
+
+    /// Create a Curve25519SecretKey from exactly 32 bytes
+    pub fn from_slice(bytes: Vec<u8>) -> Self {
+        if bytes.len() != 32 {
+            panic!("Curve25519SecretKey requires exactly 32 bytes");
+        }
+        let mut array = [0u8; 32];
+        array.copy_from_slice(&bytes);
+        Self(vodozemac::Curve25519SecretKey::from_slice(&array))
+    }
+
+    /// Convert the secret key to bytes
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_bytes().to_vec()
+    }
+
+    /// Get the public key that corresponds to this secret key
+    pub fn public_key(&self) -> std::sync::Arc<Curve25519PublicKey> {
+        std::sync::Arc::new(Curve25519PublicKey(vodozemac::Curve25519PublicKey::from(&self.0)))
+    }
+}
+
+impl From<vodozemac::Curve25519SecretKey> for Curve25519SecretKey {
+    fn from(key: vodozemac::Curve25519SecretKey) -> Self {
+        Self(key)
+    }
+}
+
+impl Default for Curve25519SecretKey {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 uniffi::include_scaffolding!("vodozemac");
 
 #[cfg(test)]

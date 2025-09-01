@@ -4,7 +4,11 @@
 // Run this with: swift test_bindings.swift
 
 import Foundation
-import vodozemac_bindings
+// Import generated bindings - update this path as needed
+// The actual module name will depend on how you've structured your project
+
+// For testing with generated files directly:
+// swift -I generated -L ../target/debug -lvodozemac_bindings test_bindings.swift
 
 // Load the generated Swift bindings
 // In a real project, you would import this as a module
@@ -56,8 +60,103 @@ func testVodozemacBindings() {
     assert(invalidDecoded.isEmpty, "Invalid base64 should result in empty array")
     
     print("\\n🎉 All tests passed! Vodozemac Swift bindings are working correctly.")
+    
+    // Test new cryptographic types
+    testCryptographicTypes()
+    
     print("\\n📚 Integration Guide: See docs/XcodeIntegrationGuide.md")
     print("🔧 To use in your project: Copy generated/ files to your Xcode project")
+}
+
+func testCryptographicTypes() {
+    print("\\n🔐 Testing Cryptographic Types")
+    print("==============================")
+    
+    // Test 6: Curve25519SecretKey
+    print("\\n6️⃣ Testing Curve25519SecretKey...")
+    let secretKey = Curve25519SecretKey()
+    let secretBytes = secretKey.toBytes()
+    print("   ✅ Created secret key with \\(secretBytes.count) bytes")
+    assert(secretBytes.count == 32, "Secret key should be 32 bytes")
+    
+    // Test 7: Curve25519SecretKey from bytes
+    print("\\n7️⃣ Testing Curve25519SecretKey from bytes...")
+    let testSecretBytes = Array(repeating: UInt8(42), count: 32)
+    let secretFromBytes = Curve25519SecretKey.fromSlice(bytes: testSecretBytes)
+    let recoveredBytes = secretFromBytes.toBytes()
+    print("   ✅ Created secret key from known bytes")
+    assert(recoveredBytes == testSecretBytes, "Secret key bytes should match")
+    
+    // Test 8: Public key derivation
+    print("\\n8️⃣ Testing public key derivation...")
+    let publicKey = secretKey.publicKey()
+    let publicBytes = publicKey.toBytes()
+    print("   ✅ Derived public key with \\(publicBytes.count) bytes")
+    assert(publicBytes.count == 32, "Public key should be 32 bytes")
+    
+    // Test 9: Curve25519PublicKey from bytes
+    print("\\n9️⃣ Testing Curve25519PublicKey from bytes...")
+    let testPublicBytes = Array(repeating: UInt8(100), count: 32)
+    let publicFromBytes = Curve25519PublicKey.fromBytes(bytes: testPublicBytes)
+    let recoveredPublicBytes = publicFromBytes.toBytes()
+    print("   ✅ Created public key from known bytes")
+    assert(recoveredPublicBytes == testPublicBytes, "Public key bytes should match")
+    
+    // Test 10: Public key base64 encoding
+    print("\\n🔟 Testing Curve25519PublicKey base64...")
+    let publicBase64 = publicFromBytes.toBase64()
+    print("   Base64: \\(publicBase64)")
+    assert(!publicBase64.isEmpty, "Base64 should not be empty")
+    
+    let publicFromBase64 = try! Curve25519PublicKey.fromBase64(input: publicBase64)
+    let roundtripBytes = publicFromBase64.toBytes()
+    print("   ✅ Base64 round-trip successful")
+    assert(roundtripBytes == testPublicBytes, "Base64 round-trip should preserve bytes")
+    
+    // Test 11: Public key methods
+    print("\\n1️⃣1️⃣ Testing Curve25519PublicKey methods...")
+    let asBytes = publicFromBytes.asBytes()
+    let toVec = publicFromBytes.toVec()
+    assert(asBytes == testPublicBytes, "asBytes should match original")
+    assert(toVec == testPublicBytes, "toVec should match original")
+    print("   ✅ All public key methods work correctly")
+    
+    // Test 12: Public key from slice
+    print("\\n1️⃣2️⃣ Testing Curve25519PublicKey from slice...")
+    let publicFromSlice = try! Curve25519PublicKey.fromSlice(bytes: testPublicBytes)
+    let sliceBytes = publicFromSlice.toBytes()
+    assert(sliceBytes == testPublicBytes, "fromSlice should preserve bytes")
+    print("   ✅ Public key from slice works correctly")
+    
+    // Test 13: Key pair consistency  
+    print("\\n1️⃣3️⃣ Testing key pair consistency...")
+    let secret1 = Curve25519SecretKey()
+    let public1 = secret1.publicKey()
+    
+    let secretBytes1 = secret1.toBytes()
+    let secret2 = Curve25519SecretKey.fromSlice(bytes: secretBytes1)
+    let public2 = secret2.publicKey()
+    
+    assert(public1.toBytes() == public2.toBytes(), "Key pair should be consistent")
+    print("   ✅ Key pair consistency verified")
+    
+    // Test 14: Error handling for public key
+    print("\\n1️⃣4️⃣ Testing public key error handling...")
+    do {
+        _ = try Curve25519PublicKey.fromBase64(input: "invalid_base64!@#")
+        assert(false, "Should have thrown an error")
+    } catch {
+        print("   ✅ Correctly caught error for invalid base64: \\(error)")
+    }
+    
+    do {
+        _ = try Curve25519PublicKey.fromSlice(bytes: Array(repeating: 0, count: 31)) // Wrong length
+        assert(false, "Should have thrown an error")  
+    } catch {
+        print("   ✅ Correctly caught error for wrong length: \\(error)")
+    }
+    
+    print("\\n🎉 All cryptographic type tests passed!")
 }
 
 // Run the tests

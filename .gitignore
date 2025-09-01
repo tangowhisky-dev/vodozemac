@@ -6,3 +6,4 @@ Cargo.lock
 mutants.out*
 coverage.xml
 /bindings/vodozemac_uniffi/target
+/doc
