@@ -368,12 +368,18 @@ func testEd25519PublicKey() {
         let publicKey = try Ed25519PublicKey.fromSlice(bytes: validBytes)
         print("   Ed25519PublicKey created from valid 32-byte slice")
         
-        // Test 2: Get bytes back
+        // Test 2: Get bytes back and length()
         let bytesBack = publicKey.asBytes()
         if validBytes == bytesBack {
             print("   ✅ PASSED - asBytes() returns original bytes")
         } else {
             print("   ❌ FAILED - asBytes() returned different bytes")
+            exit(1)
+        }
+        if publicKey.length() == 32 {
+            print("   ✅ PASSED - length() returns 32 for Ed25519PublicKey")
+        } else {
+            print("   ❌ FAILED - length() returned \(publicKey.length()), expected 32")
             exit(1)
         }
         
@@ -425,12 +431,18 @@ func testEd25519SecretKey() {
     let secretKey = Ed25519SecretKey()
     print("   Ed25519SecretKey created with default constructor")
     
-    // Test 2: Get bytes
+    // Test 2: Get bytes and length()
     let secretBytes = secretKey.toBytes()
     if secretBytes.count == 32 {
         print("   ✅ PASSED - toBytes() returns 32 bytes")
     } else {
         print("   ❌ FAILED - toBytes() returned \(secretBytes.count) bytes, expected 32")
+        exit(1)
+    }
+    if secretKey.length() == 32 {
+        print("   ✅ PASSED - length() returns 32 for Ed25519SecretKey")
+    } else {
+        print("   ❌ FAILED - length() returned \(secretKey.length()), expected 32")
         exit(1)
     }
     
@@ -515,12 +527,18 @@ func testEd25519Signature() {
     let signature = secretKey.sign(message: message)
     print("   Ed25519Signature created via signing")
     
-    // Test 2: Get bytes
+    // Test 2: Get bytes and length()
     let signatureBytes = signature.toBytes()
     if signatureBytes.count == 64 {
         print("   ✅ PASSED - toBytes() returns 64 bytes")
     } else {
         print("   ❌ FAILED - toBytes() returned \(signatureBytes.count) bytes, expected 64")
+        exit(1)
+    }
+    if signature.length() == 64 {
+        print("   ✅ PASSED - length() returns 64 for Ed25519Signature")
+    } else {
+        print("   ❌ FAILED - length() returned \(signature.length()), expected 64")
         exit(1)
     }
     
@@ -592,19 +610,40 @@ func testEd25519Signature() {
 }
 
 func testSharedSecret() {
-    print("\n14. Testing SharedSecret struct...")
-    
-    print("   Note: SharedSecret is created from Diffie-Hellman key exchange")
-    print("   SharedSecret testing would require ECDH functionality not yet exposed")
-    print("   ✅ PASSED - SharedSecret API is available for future ECDH implementations")
-    
-    // The SharedSecret methods are:
-    // - toBytes() -> Vec<u8>  
-    // - asBytes() -> Vec<u8>
-    // - wasContributory() -> bool
-    
-    // These would be tested once we have ECDH key exchange functionality
-    // in the bindings to actually create SharedSecret instances
+    print("\n14. Testing SharedSecret struct (via ECDH helper)...")
+
+    // Generate keypairs for Alice and Bob
+    let aliceSecret = Curve25519SecretKey()
+    let bobSecret = Curve25519SecretKey()
+    let alicePub = aliceSecret.publicKey()
+    let bobPub = bobSecret.publicKey()
+
+    // Perform ECDH both ways
+    let aliceShared = aliceSecret.diffieHellman(theirPublicKey: bobPub)
+    let bobShared = bobSecret.diffieHellman(theirPublicKey: alicePub)
+
+    // Check contributory and byte lengths
+    if !aliceShared.wasContributory() || !bobShared.wasContributory() {
+        print("   ❌ FAILED - Shared secret not contributory")
+        exit(1)
+    }
+
+    let aBytes = aliceShared.toBytes()
+    let bBytes = bobShared.toBytes()
+    if aBytes.count == 32 && bBytes.count == 32 {
+        print("   ✅ PASSED - SharedSecret byte length is 32")
+    } else {
+        print("   ❌ FAILED - SharedSecret bytes length incorrect: A=\(aBytes.count), B=\(bBytes.count)")
+        exit(1)
+    }
+
+    // Secrets must match
+    if aBytes == bBytes {
+        print("   ✅ PASSED - ECDH secrets match on both sides")
+    } else {
+        print("   ❌ FAILED - ECDH secrets do not match")
+        exit(1)
+    }
 }
 
 func testEd25519Integration() {

@@ -386,6 +386,14 @@ impl Curve25519SecretKey {
     pub fn public_key(&self) -> std::sync::Arc<Curve25519PublicKey> {
         std::sync::Arc::new(Curve25519PublicKey(vodozemac::Curve25519PublicKey::from(&self.0)))
     }
+
+    /// Perform a Diffie-Hellman key exchange with the given public key.
+    ///
+    /// Returns a SharedSecret that can be inspected or used by higher-level protocols.
+    pub fn diffie_hellman(&self, their_public_key: std::sync::Arc<Curve25519PublicKey>) -> std::sync::Arc<SharedSecret> {
+        let shared = self.0.diffie_hellman(&their_public_key.0);
+        std::sync::Arc::new(SharedSecret(shared))
+    }
 }
 
 impl From<vodozemac::Curve25519SecretKey> for Curve25519SecretKey {
@@ -490,6 +498,11 @@ impl Ed25519PublicKey {
         self.0.verify(&message, &signature.0)
             .map_err(|e| VodozemacError::Signature(e.to_string()))
     }
+
+    /// Return the length in bytes of an Ed25519 public key (parity with Rust LENGTH const).
+    pub fn length(&self) -> u32 {
+        vodozemac::Ed25519PublicKey::LENGTH as u32
+    }
 }
 
 impl From<vodozemac::Ed25519PublicKey> for Ed25519PublicKey {
@@ -566,6 +579,11 @@ impl Ed25519SecretKey {
         let signature = self.0.sign(&message);
         std::sync::Arc::new(Ed25519Signature(signature))
     }
+
+    /// Return the length in bytes of an Ed25519 secret key (parity with Rust LENGTH const).
+    pub fn length(&self) -> u32 {
+        vodozemac::Ed25519SecretKey::LENGTH as u32
+    }
 }
 
 impl From<vodozemac::Ed25519SecretKey> for Ed25519SecretKey {
@@ -614,6 +632,11 @@ impl Ed25519Signature {
     /// Pattern: Method returning Vec<u8>
     pub fn to_bytes(&self) -> Vec<u8> {
         self.0.to_bytes().to_vec()
+    }
+
+    /// Return the length in bytes of an Ed25519 signature (parity with Rust LENGTH const).
+    pub fn length(&self) -> u32 {
+        vodozemac::Ed25519Signature::LENGTH as u32
     }
 }
 

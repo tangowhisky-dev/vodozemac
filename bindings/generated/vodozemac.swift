@@ -1483,6 +1483,13 @@ public func FfiConverterTypeCurve25519PublicKey_lower(_ value: Curve25519PublicK
 public protocol Curve25519SecretKeyProtocol: AnyObject, Sendable {
     
     /**
+     * Perform a Diffie-Hellman key exchange with the given public key.
+     *
+     * Returns a SharedSecret that can be inspected or used by higher-level protocols.
+     */
+    func diffieHellman(theirPublicKey: Curve25519PublicKey)  -> SharedSecret
+    
+    /**
      * Get the public key that corresponds to this secret key
      *
      * Pattern: Method returning Arc<AnotherObject> - CRITICAL for UniFFI
@@ -1574,6 +1581,19 @@ public static func fromSlice(bytes: Data) -> Curve25519SecretKey  {
 }
     
 
+    
+    /**
+     * Perform a Diffie-Hellman key exchange with the given public key.
+     *
+     * Returns a SharedSecret that can be inspected or used by higher-level protocols.
+     */
+open func diffieHellman(theirPublicKey: Curve25519PublicKey) -> SharedSecret  {
+    return try!  FfiConverterTypeSharedSecret_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_curve25519secretkey_diffie_hellman(self.uniffiCloneHandle(),
+        FfiConverterTypeCurve25519PublicKey_lower(theirPublicKey),$0
+    )
+})
+}
     
     /**
      * Get the public key that corresponds to this secret key
@@ -2152,6 +2172,11 @@ public protocol Ed25519PublicKeyProtocol: AnyObject, Sendable {
     func asBytes()  -> Data
     
     /**
+     * Return the length in bytes of an Ed25519 public key (parity with Rust LENGTH const).
+     */
+    func length()  -> UInt32
+    
+    /**
      * Convert the public key to a base64 string
      *
      * Pattern: Method returning primitive type (String)
@@ -2258,6 +2283,16 @@ open func asBytes() -> Data  {
 }
     
     /**
+     * Return the length in bytes of an Ed25519 public key (parity with Rust LENGTH const).
+     */
+open func length() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519publickey_length(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
      * Convert the public key to a base64 string
      *
      * Pattern: Method returning primitive type (String)
@@ -2338,6 +2373,11 @@ public func FfiConverterTypeEd25519PublicKey_lower(_ value: Ed25519PublicKey) ->
  * Ed25519 secret key used to create digital signatures
  */
 public protocol Ed25519SecretKeyProtocol: AnyObject, Sendable {
+    
+    /**
+     * Return the length in bytes of an Ed25519 secret key (parity with Rust LENGTH const).
+     */
+    func length()  -> UInt32
     
     /**
      * Get the public key that matches this secret key
@@ -2460,6 +2500,16 @@ public static func fromSlice(bytes: Data)throws  -> Ed25519SecretKey  {
 
     
     /**
+     * Return the length in bytes of an Ed25519 secret key (parity with Rust LENGTH const).
+     */
+open func length() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519secretkey_length(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
      * Get the public key that matches this secret key
      *
      * Pattern: Method returning Arc<AnotherObject>
@@ -2566,6 +2616,11 @@ public func FfiConverterTypeEd25519SecretKey_lower(_ value: Ed25519SecretKey) ->
 public protocol Ed25519SignatureProtocol: AnyObject, Sendable {
     
     /**
+     * Return the length in bytes of an Ed25519 signature (parity with Rust LENGTH const).
+     */
+    func length()  -> UInt32
+    
+    /**
      * Convert the signature to a base64 encoded string
      *
      * Pattern: Method returning primitive type (String)
@@ -2658,6 +2713,16 @@ public static func fromSlice(bytes: Data)throws  -> Ed25519Signature  {
 }
     
 
+    
+    /**
+     * Return the length in bytes of an Ed25519 signature (parity with Rust LENGTH const).
+     */
+open func length() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_ed25519signature_length(self.uniffiCloneHandle(),$0
+    )
+})
+}
     
     /**
      * Convert the signature to a base64 encoded string
@@ -8761,6 +8826,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_to_vec() != 30420) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519secretkey_diffie_hellman() != 35570) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_method_curve25519secretkey_public_key() != 57764) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -8791,10 +8859,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_method_ed25519publickey_as_bytes() != 30460) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519publickey_length() != 36441) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_method_ed25519publickey_to_base64() != 16715) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_ed25519publickey_verify() != 60604) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519secretkey_length() != 31260) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_ed25519secretkey_public_key() != 25167) {
@@ -8807,6 +8881,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_ed25519secretkey_to_bytes() != 15165) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_ed25519signature_length() != 34357) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_ed25519signature_to_base64() != 34735) {
