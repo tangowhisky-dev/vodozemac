@@ -713,8 +713,20 @@ func runOlmTestsSection() {
     }
 }
 
+func runMegolmTestsSection() {
+    print("\n")
+    print(String(repeating: "=", count: 50))
+    if runMegolmTests() {
+        print("\n✅ ALL MEGOLM TESTS PASSED")
+    } else {
+        print("\n❌ Some MEGOLM tests FAILED")
+        exit(1)
+    }
+}
+
 // Run the tests
 runTests()
 runEciesTestsSection()
 runSasTestsSection()
 runOlmTestsSection()
+runMegolmTestsSection()

@@ -150,6 +150,25 @@ impl From<vodozemac::sas::InvalidCount> for VodozemacError {
     }
 }
 
+// Error conversions for Megolm types
+impl From<vodozemac::megolm::DecryptionError> for VodozemacError {
+    fn from(error: vodozemac::megolm::DecryptionError) -> Self {
+        VodozemacError::MegolmDecryption(error.to_string())
+    }
+}
+
+impl From<vodozemac::megolm::SessionKeyDecodeError> for VodozemacError {
+    fn from(error: vodozemac::megolm::SessionKeyDecodeError) -> Self {
+        VodozemacError::SessionKeyDecode(error.to_string())
+    }
+}
+
+impl From<vodozemac::PickleError> for VodozemacError {
+    fn from(error: vodozemac::PickleError) -> Self {
+        VodozemacError::Pickle(error.to_string())
+    }
+}
+
 // Enums
 #[derive(Debug, Clone, PartialEq)]
 pub enum MessageType {
@@ -1787,6 +1806,460 @@ impl SessionPickle {
         let pickle = vodozemac::olm::SessionPickle::from_encrypted(&ciphertext, &key_array)
             .map_err(|e| VodozemacError::Pickle(e.to_string()))?;
         Ok(Arc::new(SessionPickle { inner: pickle }))
+    }
+}
+
+// ========================================================================
+// Megolm Module Bindings
+// ========================================================================
+
+/// Configuration options for Megolm sessions
+/// 
+/// This determines the version and encryption parameters used for the session
+#[derive(uniffi::Object)]
+pub struct MegolmSessionConfig {
+    inner: vodozemac::megolm::SessionConfig,
+}
+
+#[uniffi::export]
+impl MegolmSessionConfig {
+    /// Create a Version 1 session configuration
+    /// 
+    /// Version 1 uses truncated MAC for better compatibility with older clients
+    #[uniffi::constructor]
+    pub fn version_1() -> Arc<Self> {
+        Arc::new(Self {
+            inner: vodozemac::megolm::SessionConfig::version_1(),
+        })
+    }
+
+    /// Create a Version 2 session configuration  
+    /// 
+    /// Version 2 uses full MAC for better security
+    #[uniffi::constructor]
+    pub fn version_2() -> Arc<Self> {
+        Arc::new(Self {
+            inner: vodozemac::megolm::SessionConfig::version_2(),
+        })
+    }
+}
+
+impl From<vodozemac::megolm::SessionConfig> for MegolmSessionConfig {
+    fn from(config: vodozemac::megolm::SessionConfig) -> Self {
+        Self { inner: config }
+    }
+}
+
+/// A message successfully decrypted by an InboundGroupSession
+/// 
+/// Contains the decrypted plaintext and the message index to prevent replay attacks
+#[derive(uniffi::Object)]
+pub struct DecryptedMessage {
+    inner: vodozemac::megolm::DecryptedMessage,
+}
+
+#[uniffi::export]
+impl DecryptedMessage {
+    /// Get the decrypted plaintext bytes
+    pub fn plaintext(&self) -> Vec<u8> {
+        self.inner.plaintext.clone()
+    }
+
+    /// Get the message index used to encrypt this message
+    /// 
+    /// Each plaintext message should be encrypted with a unique message index per session
+    pub fn message_index(&self) -> u32 {
+        self.inner.message_index
+    }
+}
+
+impl From<vodozemac::megolm::DecryptedMessage> for DecryptedMessage {
+    fn from(message: vodozemac::megolm::DecryptedMessage) -> Self {
+        Self { inner: message }
+    }
+}
+
+/// An exported session key that can be used to create an InboundGroupSession
+/// 
+/// This is used to share session keys between clients for group messaging
+#[derive(uniffi::Object)]
+pub struct ExportedSessionKey {
+    inner: vodozemac::megolm::ExportedSessionKey,
+}
+
+#[uniffi::export]
+impl ExportedSessionKey {
+    /// Create an ExportedSessionKey from a base64 string
+    #[uniffi::constructor]
+    pub fn from_base64(input: String) -> Result<Arc<Self>, VodozemacError> {
+        let key = vodozemac::megolm::ExportedSessionKey::from_base64(&input)?;
+        Ok(Arc::new(Self { inner: key }))
+    }
+
+    /// Create an ExportedSessionKey from bytes
+    #[uniffi::constructor]
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Arc<Self>, VodozemacError> {
+        let key = vodozemac::megolm::ExportedSessionKey::from_bytes(&bytes)?;
+        Ok(Arc::new(Self { inner: key }))
+    }
+
+    /// Convert the exported session key to a base64 string
+    pub fn to_base64(&self) -> String {
+        self.inner.to_base64()
+    }
+
+    /// Convert the exported session key to bytes
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.inner.to_bytes()
+    }
+}
+
+impl From<vodozemac::megolm::ExportedSessionKey> for ExportedSessionKey {
+    fn from(key: vodozemac::megolm::ExportedSessionKey) -> Self {
+        Self { inner: key }
+    }
+}
+
+/// A Megolm group session for sending encrypted messages
+/// 
+/// Represents a single sending participant in an encrypted group communication context
+#[derive(uniffi::Object)]
+pub struct GroupSession {
+    inner: std::sync::Mutex<vodozemac::megolm::GroupSession>,
+}
+
+#[uniffi::export]
+impl GroupSession {
+    /// Create a new group session with the default configuration (Version 2)
+    #[uniffi::constructor]
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            inner: std::sync::Mutex::new(vodozemac::megolm::GroupSession::new(vodozemac::megolm::SessionConfig::version_2())),
+        })
+    }
+
+    /// Create a new group session with a specific configuration
+    #[uniffi::constructor]
+    pub fn with_config(config: Arc<MegolmSessionConfig>) -> Arc<Self> {
+        Arc::new(Self {
+            inner: std::sync::Mutex::new(vodozemac::megolm::GroupSession::new(config.inner)),
+        })
+    }
+
+    /// Create a group session from a pickle  
+    #[uniffi::constructor]
+    pub fn from_pickle(pickle: Arc<GroupSessionPickle>) -> Result<Arc<Self>, VodozemacError> {
+        // Extract the inner value from Arc - this consumes the Arc
+        let session_pickle = Arc::try_unwrap(pickle).map_err(|_| VodozemacError::Key("Failed to unwrap GroupSessionPickle".to_string()))?.inner;
+        let session = vodozemac::megolm::GroupSession::from_pickle(session_pickle);
+        Ok(Arc::new(Self {
+            inner: std::sync::Mutex::new(session),
+        }))
+    }
+
+    /// Encrypt a plaintext message
+    pub fn encrypt(&self, plaintext: Vec<u8>) -> Arc<MegolmMessage> {
+        let mut session = self.inner.lock().unwrap();
+        let message = session.encrypt(&plaintext);
+        Arc::new(MegolmMessage { inner: message })
+    }
+
+    /// Get the current message index
+    pub fn message_index(&self) -> u32 {
+        let session = self.inner.lock().unwrap();
+        session.message_index()
+    }
+
+    /// Get the session key that can be shared with other participants
+    pub fn session_key(&self) -> Arc<SessionKey> {
+        let session = self.inner.lock().unwrap();
+        let key = session.session_key();
+        Arc::new(SessionKey { inner: key })
+    }
+
+    /// Create a pickle from this group session
+    pub fn pickle(&self) -> Arc<GroupSessionPickle> {
+        let session = self.inner.lock().unwrap();
+        let pickle = session.pickle();
+        Arc::new(GroupSessionPickle { inner: pickle })
+    }
+
+    /// Get the session ID
+    pub fn session_id(&self) -> String {
+        let session = self.inner.lock().unwrap();
+        session.session_id()
+    }
+}
+
+impl From<vodozemac::megolm::GroupSession> for GroupSession {
+    fn from(session: vodozemac::megolm::GroupSession) -> Self {
+        Self { inner: std::sync::Mutex::new(session) }
+    }
+}
+
+/// A pickled group session that can be stored and later restored
+#[derive(uniffi::Object)]
+pub struct GroupSessionPickle {
+    inner: vodozemac::megolm::GroupSessionPickle,
+}
+
+#[uniffi::export]
+impl GroupSessionPickle {
+    /// Create an encrypted pickle from this group session pickle
+    /// 
+    /// Note: This consumes the pickle as the encryption method takes ownership
+    pub fn encrypt(self: Arc<Self>, pickle_key: Vec<u8>) -> Result<String, VodozemacError> {
+        if pickle_key.len() != 32 {
+            return Err(VodozemacError::Key("Pickle key must be exactly 32 bytes".to_string()));
+        }
+        
+        let key_array: [u8; 32] = pickle_key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
+        let inner_pickle = Arc::try_unwrap(self)
+            .map_err(|_| VodozemacError::Key("Failed to unwrap GroupSessionPickle".to_string()))?
+            .inner;
+        let encrypted = inner_pickle.encrypt(&key_array);
+        Ok(encrypted)
+    }
+
+    /// Create a group session pickle by decrypting an encrypted pickle
+    #[uniffi::constructor]
+    pub fn from_encrypted(ciphertext: String, pickle_key: Vec<u8>) -> Result<Arc<Self>, VodozemacError> {
+        if pickle_key.len() != 32 {
+            return Err(VodozemacError::Key("Pickle key must be exactly 32 bytes".to_string()));
+        }
+        
+        let key_array: [u8; 32] = pickle_key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
+        let pickle = vodozemac::megolm::GroupSessionPickle::from_encrypted(&ciphertext, &key_array)?;
+        Ok(Arc::new(Self { inner: pickle }))
+    }
+}
+
+impl From<vodozemac::megolm::GroupSessionPickle> for GroupSessionPickle {
+    fn from(pickle: vodozemac::megolm::GroupSessionPickle) -> Self {
+        Self { inner: pickle }
+    }
+}
+
+/// A Megolm inbound group session for receiving encrypted messages  
+/// 
+/// Represents a single receiving participant in an encrypted group communication
+#[derive(uniffi::Object)]
+pub struct InboundGroupSession {
+    inner: std::sync::Mutex<vodozemac::megolm::InboundGroupSession>,
+}
+
+#[uniffi::export]
+impl InboundGroupSession {
+    /// Create an inbound group session from a session key
+    #[uniffi::constructor]
+    pub fn new(session_key: Arc<SessionKey>, config: Arc<MegolmSessionConfig>) -> Arc<Self> {
+        let session = vodozemac::megolm::InboundGroupSession::new(&session_key.inner, config.inner);
+        Arc::new(Self {
+            inner: std::sync::Mutex::new(session),
+        })
+    }
+
+    /// Import an inbound group session from an exported session key
+    #[uniffi::constructor]
+    pub fn import(exported_key: Arc<ExportedSessionKey>, config: Arc<MegolmSessionConfig>) -> Arc<Self> {
+        let session = vodozemac::megolm::InboundGroupSession::import(&exported_key.inner, config.inner);
+        Arc::new(Self {
+            inner: std::sync::Mutex::new(session),
+        })
+    }
+
+    /// Create an inbound group session from a pickle
+    #[uniffi::constructor]
+    pub fn from_pickle(pickle: Arc<InboundGroupSessionPickle>) -> Result<Arc<Self>, VodozemacError> {
+        // Extract the inner value from Arc - this consumes the Arc
+        let session_pickle = Arc::try_unwrap(pickle).map_err(|_| VodozemacError::Key("Failed to unwrap InboundGroupSessionPickle".to_string()))?.inner;
+        let session = vodozemac::megolm::InboundGroupSession::from_pickle(session_pickle);
+        Ok(Arc::new(Self {
+            inner: std::sync::Mutex::new(session),
+        }))
+    }
+
+    /// Decrypt a megolm message
+    pub fn decrypt(&self, message: Arc<MegolmMessage>) -> Result<Arc<DecryptedMessage>, VodozemacError> {
+        let mut session = self.inner.lock().unwrap();
+        let decrypted = session.decrypt(&message.inner)?;
+        Ok(Arc::new(DecryptedMessage { inner: decrypted }))
+    }
+
+    /// Get the session ID
+    pub fn session_id(&self) -> String {
+        let session = self.inner.lock().unwrap();
+        session.session_id()
+    }
+
+    /// Get the first known message index
+    pub fn first_known_index(&self) -> u32 {
+        let session = self.inner.lock().unwrap();
+        session.first_known_index()
+    }
+
+    /// Export the session at a specific message index
+    pub fn export_at(&self, message_index: u32) -> Option<Arc<ExportedSessionKey>> {
+        let mut session = self.inner.lock().unwrap();
+        session.export_at(message_index).map(|key| Arc::new(ExportedSessionKey { inner: key }))
+    }
+
+    /// Compare sessions to determine their relative position in the ratchet
+    pub fn compare(&self, other: Arc<InboundGroupSession>) -> SessionOrdering {
+        let mut session = self.inner.lock().unwrap();
+        let mut other_session = other.inner.lock().unwrap();
+        session.compare(&mut *other_session).into()
+    }
+
+    /// Create a pickle from this inbound group session
+    pub fn pickle(&self) -> Arc<InboundGroupSessionPickle> {
+        let session = self.inner.lock().unwrap();
+        let pickle = session.pickle();
+        Arc::new(InboundGroupSessionPickle { inner: pickle })
+    }
+}
+
+impl From<vodozemac::megolm::InboundGroupSession> for InboundGroupSession {
+    fn from(session: vodozemac::megolm::InboundGroupSession) -> Self {
+        Self { inner: std::sync::Mutex::new(session) }
+    }
+}
+
+/// A pickled inbound group session that can be stored and later restored
+#[derive(uniffi::Object)]
+pub struct InboundGroupSessionPickle {
+    inner: vodozemac::megolm::InboundGroupSessionPickle,
+}
+
+#[uniffi::export]
+impl InboundGroupSessionPickle {
+    /// Create an encrypted pickle from this inbound group session pickle
+    /// 
+    /// Note: This consumes the pickle as the encryption method takes ownership
+    pub fn encrypt(self: Arc<Self>, pickle_key: Vec<u8>) -> Result<String, VodozemacError> {
+        if pickle_key.len() != 32 {
+            return Err(VodozemacError::Key("Pickle key must be exactly 32 bytes".to_string()));
+        }
+        
+        let key_array: [u8; 32] = pickle_key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
+        let inner_pickle = Arc::try_unwrap(self)
+            .map_err(|_| VodozemacError::Key("Failed to unwrap InboundGroupSessionPickle".to_string()))?
+            .inner;
+        let encrypted = inner_pickle.encrypt(&key_array);
+        Ok(encrypted)
+    }
+
+    /// Create an inbound group session pickle by decrypting an encrypted pickle
+    #[uniffi::constructor]
+    pub fn from_encrypted(ciphertext: String, pickle_key: Vec<u8>) -> Result<Arc<Self>, VodozemacError> {
+        if pickle_key.len() != 32 {
+            return Err(VodozemacError::Key("Pickle key must be exactly 32 bytes".to_string()));
+        }
+        
+        let key_array: [u8; 32] = pickle_key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
+        let pickle = vodozemac::megolm::InboundGroupSessionPickle::from_encrypted(&ciphertext, &key_array)?;
+        Ok(Arc::new(Self { inner: pickle }))
+    }
+}
+
+impl From<vodozemac::megolm::InboundGroupSessionPickle> for InboundGroupSessionPickle {
+    fn from(pickle: vodozemac::megolm::InboundGroupSessionPickle) -> Self {
+        Self { inner: pickle }
+    }
+}
+
+/// An encrypted Megolm message
+/// 
+/// Contains the ciphertext, signature, and metadata for a group message
+#[derive(uniffi::Object)]
+pub struct MegolmMessage {
+    inner: vodozemac::megolm::MegolmMessage,
+}
+
+#[uniffi::export]
+impl MegolmMessage {
+    /// Create a MegolmMessage from a base64 string
+    #[uniffi::constructor]
+    pub fn from_base64(input: String) -> Result<Arc<Self>, VodozemacError> {
+        let bytes = base64_decode(input)?;
+        let message: vodozemac::megolm::MegolmMessage = bytes.try_into()
+            .map_err(|e: vodozemac::DecodeError| VodozemacError::Decode(e.to_string()))?;
+        Ok(Arc::new(Self { inner: message }))
+    }
+
+    /// Create a MegolmMessage from bytes
+    #[uniffi::constructor] 
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Arc<Self>, VodozemacError> {
+        let message: vodozemac::megolm::MegolmMessage = bytes.try_into()
+            .map_err(|e: vodozemac::DecodeError| VodozemacError::Decode(e.to_string()))?;
+        Ok(Arc::new(Self { inner: message }))
+    }
+
+    /// Convert the message to a base64 string
+    pub fn to_base64(&self) -> String {
+        self.inner.to_base64()
+    }
+
+    /// Convert the message to bytes
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.inner.to_bytes()
+    }
+
+    /// Get the message index
+    pub fn message_index(&self) -> u32 {
+        self.inner.message_index()
+    }
+
+    /// Get the ciphertext
+    pub fn ciphertext(&self) -> Vec<u8> {
+        self.inner.ciphertext().to_vec()
+    }
+}
+
+impl From<vodozemac::megolm::MegolmMessage> for MegolmMessage {
+    fn from(message: vodozemac::megolm::MegolmMessage) -> Self {
+        Self { inner: message }
+    }
+}
+
+/// A session key that can be used to create an InboundGroupSession
+/// 
+/// Contains the signed session key for authentication
+#[derive(uniffi::Object)]
+pub struct SessionKey {
+    inner: vodozemac::megolm::SessionKey,
+}
+
+#[uniffi::export]
+impl SessionKey {
+    /// Create a SessionKey from a base64 string
+    #[uniffi::constructor]
+    pub fn from_base64(input: String) -> Result<Arc<Self>, VodozemacError> {
+        let key = vodozemac::megolm::SessionKey::from_base64(&input)?;
+        Ok(Arc::new(Self { inner: key }))
+    }
+
+    /// Create a SessionKey from bytes
+    #[uniffi::constructor]
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Arc<Self>, VodozemacError> {
+        let key = vodozemac::megolm::SessionKey::from_bytes(&bytes)?;
+        Ok(Arc::new(Self { inner: key }))
+    }
+
+    /// Convert the session key to a base64 string
+    pub fn to_base64(&self) -> String {
+        self.inner.to_base64()
+    }
+
+    /// Convert the session key to bytes
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.inner.to_bytes()
+    }
+}
+
+impl From<vodozemac::megolm::SessionKey> for SessionKey {
+    fn from(key: vodozemac::megolm::SessionKey) -> Self {
+        Self { inner: key }
     }
 }
 

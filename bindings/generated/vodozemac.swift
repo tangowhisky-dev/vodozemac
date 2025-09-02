@@ -1650,6 +1650,151 @@ public func FfiConverterTypeCurve25519SecretKey_lower(_ value: Curve25519SecretK
 
 
 /**
+ * A message successfully decrypted by an InboundGroupSession
+ *
+ * Contains the decrypted plaintext and the message index to prevent replay attacks
+ */
+public protocol DecryptedMessageProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the message index used to encrypt this message
+     *
+     * Each plaintext message should be encrypted with a unique message index per session
+     */
+    func messageIndex()  -> UInt32
+    
+    /**
+     * Get the decrypted plaintext bytes
+     */
+    func plaintext()  -> Data
+    
+}
+/**
+ * A message successfully decrypted by an InboundGroupSession
+ *
+ * Contains the decrypted plaintext and the message index to prevent replay attacks
+ */
+open class DecryptedMessage: DecryptedMessageProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_decryptedmessage(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_decryptedmessage(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Get the message index used to encrypt this message
+     *
+     * Each plaintext message should be encrypted with a unique message index per session
+     */
+open func messageIndex() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_decryptedmessage_message_index(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the decrypted plaintext bytes
+     */
+open func plaintext() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_decryptedmessage_plaintext(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDecryptedMessage: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = DecryptedMessage
+
+    public static func lift(_ handle: UInt64) throws -> DecryptedMessage {
+        return DecryptedMessage(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: DecryptedMessage) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DecryptedMessage {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: DecryptedMessage, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDecryptedMessage_lift(_ handle: UInt64) throws -> DecryptedMessage {
+    return try FfiConverterTypeDecryptedMessage.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDecryptedMessage_lower(_ value: DecryptedMessage) -> UInt64 {
+    return FfiConverterTypeDecryptedMessage.lower(value)
+}
+
+
+
+
+
+
+/**
  * An unestablished ECIES session.
  */
 public protocol EciesProtocol: AnyObject, Sendable {
@@ -3041,6 +3186,527 @@ public func FfiConverterTypeEstablishedSas_lower(_ value: EstablishedSas) -> UIn
 
 
 /**
+ * An exported session key that can be used to create an InboundGroupSession
+ *
+ * This is used to share session keys between clients for group messaging
+ */
+public protocol ExportedSessionKeyProtocol: AnyObject, Sendable {
+    
+    /**
+     * Convert the exported session key to a base64 string
+     */
+    func toBase64()  -> String
+    
+    /**
+     * Convert the exported session key to bytes
+     */
+    func toBytes()  -> Data
+    
+}
+/**
+ * An exported session key that can be used to create an InboundGroupSession
+ *
+ * This is used to share session keys between clients for group messaging
+ */
+open class ExportedSessionKey: ExportedSessionKeyProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_exportedsessionkey(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_exportedsessionkey(handle, $0) }
+    }
+
+    
+    /**
+     * Create an ExportedSessionKey from a base64 string
+     */
+public static func fromBase64(input: String)throws  -> ExportedSessionKey  {
+    return try  FfiConverterTypeExportedSessionKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_exportedsessionkey_from_base64(
+        FfiConverterString.lower(input),$0
+    )
+})
+}
+    
+    /**
+     * Create an ExportedSessionKey from bytes
+     */
+public static func fromBytes(bytes: Data)throws  -> ExportedSessionKey  {
+    return try  FfiConverterTypeExportedSessionKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_exportedsessionkey_from_bytes(
+        FfiConverterData.lower(bytes),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Convert the exported session key to a base64 string
+     */
+open func toBase64() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_exportedsessionkey_to_base64(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Convert the exported session key to bytes
+     */
+open func toBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_exportedsessionkey_to_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeExportedSessionKey: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = ExportedSessionKey
+
+    public static func lift(_ handle: UInt64) throws -> ExportedSessionKey {
+        return ExportedSessionKey(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: ExportedSessionKey) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ExportedSessionKey {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: ExportedSessionKey, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeExportedSessionKey_lift(_ handle: UInt64) throws -> ExportedSessionKey {
+    return try FfiConverterTypeExportedSessionKey.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeExportedSessionKey_lower(_ value: ExportedSessionKey) -> UInt64 {
+    return FfiConverterTypeExportedSessionKey.lower(value)
+}
+
+
+
+
+
+
+/**
+ * A Megolm group session for sending encrypted messages
+ *
+ * Represents a single sending participant in an encrypted group communication context
+ */
+public protocol GroupSessionProtocol: AnyObject, Sendable {
+    
+    /**
+     * Encrypt a plaintext message
+     */
+    func encrypt(plaintext: Data)  -> MegolmMessage
+    
+    /**
+     * Get the current message index
+     */
+    func messageIndex()  -> UInt32
+    
+    /**
+     * Create a pickle from this group session
+     */
+    func pickle()  -> GroupSessionPickle
+    
+    /**
+     * Get the session ID
+     */
+    func sessionId()  -> String
+    
+    /**
+     * Get the session key that can be shared with other participants
+     */
+    func sessionKey()  -> SessionKey
+    
+}
+/**
+ * A Megolm group session for sending encrypted messages
+ *
+ * Represents a single sending participant in an encrypted group communication context
+ */
+open class GroupSession: GroupSessionProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_groupsession(self.handle, $0) }
+    }
+    /**
+     * Create a new group session with the default configuration (Version 2)
+     */
+public convenience init() {
+    let handle =
+        try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_groupsession_new($0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_groupsession(handle, $0) }
+    }
+
+    
+    /**
+     * Create a group session from a pickle
+     */
+public static func fromPickle(pickle: GroupSessionPickle)throws  -> GroupSession  {
+    return try  FfiConverterTypeGroupSession_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_groupsession_from_pickle(
+        FfiConverterTypeGroupSessionPickle_lower(pickle),$0
+    )
+})
+}
+    
+    /**
+     * Create a new group session with a specific configuration
+     */
+public static func withConfig(config: MegolmSessionConfig) -> GroupSession  {
+    return try!  FfiConverterTypeGroupSession_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_groupsession_with_config(
+        FfiConverterTypeMegolmSessionConfig_lower(config),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Encrypt a plaintext message
+     */
+open func encrypt(plaintext: Data) -> MegolmMessage  {
+    return try!  FfiConverterTypeMegolmMessage_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_groupsession_encrypt(self.uniffiCloneHandle(),
+        FfiConverterData.lower(plaintext),$0
+    )
+})
+}
+    
+    /**
+     * Get the current message index
+     */
+open func messageIndex() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_groupsession_message_index(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Create a pickle from this group session
+     */
+open func pickle() -> GroupSessionPickle  {
+    return try!  FfiConverterTypeGroupSessionPickle_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_groupsession_pickle(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the session ID
+     */
+open func sessionId() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_groupsession_session_id(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the session key that can be shared with other participants
+     */
+open func sessionKey() -> SessionKey  {
+    return try!  FfiConverterTypeSessionKey_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_groupsession_session_key(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGroupSession: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = GroupSession
+
+    public static func lift(_ handle: UInt64) throws -> GroupSession {
+        return GroupSession(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: GroupSession) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GroupSession {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: GroupSession, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGroupSession_lift(_ handle: UInt64) throws -> GroupSession {
+    return try FfiConverterTypeGroupSession.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGroupSession_lower(_ value: GroupSession) -> UInt64 {
+    return FfiConverterTypeGroupSession.lower(value)
+}
+
+
+
+
+
+
+/**
+ * A pickled group session that can be stored and later restored
+ */
+public protocol GroupSessionPickleProtocol: AnyObject, Sendable {
+    
+    /**
+     * Create an encrypted pickle from this group session pickle
+     *
+     * Note: This consumes the pickle as the encryption method takes ownership
+     */
+    func encrypt(pickleKey: Data) throws  -> String
+    
+}
+/**
+ * A pickled group session that can be stored and later restored
+ */
+open class GroupSessionPickle: GroupSessionPickleProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_groupsessionpickle(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_groupsessionpickle(handle, $0) }
+    }
+
+    
+    /**
+     * Create a group session pickle by decrypting an encrypted pickle
+     */
+public static func fromEncrypted(ciphertext: String, pickleKey: Data)throws  -> GroupSessionPickle  {
+    return try  FfiConverterTypeGroupSessionPickle_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_groupsessionpickle_from_encrypted(
+        FfiConverterString.lower(ciphertext),
+        FfiConverterData.lower(pickleKey),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Create an encrypted pickle from this group session pickle
+     *
+     * Note: This consumes the pickle as the encryption method takes ownership
+     */
+open func encrypt(pickleKey: Data)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_groupsessionpickle_encrypt(self.uniffiCloneHandle(),
+        FfiConverterData.lower(pickleKey),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGroupSessionPickle: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = GroupSessionPickle
+
+    public static func lift(_ handle: UInt64) throws -> GroupSessionPickle {
+        return GroupSessionPickle(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: GroupSessionPickle) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GroupSessionPickle {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: GroupSessionPickle, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGroupSessionPickle_lift(_ handle: UInt64) throws -> GroupSessionPickle {
+    return try FfiConverterTypeGroupSessionPickle.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGroupSessionPickle_lower(_ value: GroupSessionPickle) -> UInt64 {
+    return FfiConverterTypeGroupSessionPickle.lower(value)
+}
+
+
+
+
+
+
+/**
  * The two main identity keys of an Account.
  */
 public protocol IdentityKeysProtocol: AnyObject, Sendable {
@@ -3307,6 +3973,384 @@ public func FfiConverterTypeInboundCreationResult_lift(_ handle: UInt64) throws 
 #endif
 public func FfiConverterTypeInboundCreationResult_lower(_ value: InboundCreationResult) -> UInt64 {
     return FfiConverterTypeInboundCreationResult.lower(value)
+}
+
+
+
+
+
+
+/**
+ * A Megolm inbound group session for receiving encrypted messages
+ *
+ * Represents a single receiving participant in an encrypted group communication
+ */
+public protocol InboundGroupSessionProtocol: AnyObject, Sendable {
+    
+    /**
+     * Compare sessions to determine their relative position in the ratchet
+     */
+    func compare(other: InboundGroupSession)  -> SessionOrdering
+    
+    /**
+     * Decrypt a megolm message
+     */
+    func decrypt(message: MegolmMessage) throws  -> DecryptedMessage
+    
+    /**
+     * Export the session at a specific message index
+     */
+    func exportAt(messageIndex: UInt32)  -> ExportedSessionKey?
+    
+    /**
+     * Get the first known message index
+     */
+    func firstKnownIndex()  -> UInt32
+    
+    /**
+     * Create a pickle from this inbound group session
+     */
+    func pickle()  -> InboundGroupSessionPickle
+    
+    /**
+     * Get the session ID
+     */
+    func sessionId()  -> String
+    
+}
+/**
+ * A Megolm inbound group session for receiving encrypted messages
+ *
+ * Represents a single receiving participant in an encrypted group communication
+ */
+open class InboundGroupSession: InboundGroupSessionProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_inboundgroupsession(self.handle, $0) }
+    }
+    /**
+     * Create an inbound group session from a session key
+     */
+public convenience init(sessionKey: SessionKey, config: MegolmSessionConfig) {
+    let handle =
+        try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_inboundgroupsession_new(
+        FfiConverterTypeSessionKey_lower(sessionKey),
+        FfiConverterTypeMegolmSessionConfig_lower(config),$0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_inboundgroupsession(handle, $0) }
+    }
+
+    
+    /**
+     * Create an inbound group session from a pickle
+     */
+public static func fromPickle(pickle: InboundGroupSessionPickle)throws  -> InboundGroupSession  {
+    return try  FfiConverterTypeInboundGroupSession_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_inboundgroupsession_from_pickle(
+        FfiConverterTypeInboundGroupSessionPickle_lower(pickle),$0
+    )
+})
+}
+    
+    /**
+     * Import an inbound group session from an exported session key
+     */
+public static func `import`(exportedKey: ExportedSessionKey, config: MegolmSessionConfig) -> InboundGroupSession  {
+    return try!  FfiConverterTypeInboundGroupSession_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_inboundgroupsession_import(
+        FfiConverterTypeExportedSessionKey_lower(exportedKey),
+        FfiConverterTypeMegolmSessionConfig_lower(config),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Compare sessions to determine their relative position in the ratchet
+     */
+open func compare(other: InboundGroupSession) -> SessionOrdering  {
+    return try!  FfiConverterTypeSessionOrdering_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_inboundgroupsession_compare(self.uniffiCloneHandle(),
+        FfiConverterTypeInboundGroupSession_lower(other),$0
+    )
+})
+}
+    
+    /**
+     * Decrypt a megolm message
+     */
+open func decrypt(message: MegolmMessage)throws  -> DecryptedMessage  {
+    return try  FfiConverterTypeDecryptedMessage_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_inboundgroupsession_decrypt(self.uniffiCloneHandle(),
+        FfiConverterTypeMegolmMessage_lower(message),$0
+    )
+})
+}
+    
+    /**
+     * Export the session at a specific message index
+     */
+open func exportAt(messageIndex: UInt32) -> ExportedSessionKey?  {
+    return try!  FfiConverterOptionTypeExportedSessionKey.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_inboundgroupsession_export_at(self.uniffiCloneHandle(),
+        FfiConverterUInt32.lower(messageIndex),$0
+    )
+})
+}
+    
+    /**
+     * Get the first known message index
+     */
+open func firstKnownIndex() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_inboundgroupsession_first_known_index(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Create a pickle from this inbound group session
+     */
+open func pickle() -> InboundGroupSessionPickle  {
+    return try!  FfiConverterTypeInboundGroupSessionPickle_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_inboundgroupsession_pickle(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the session ID
+     */
+open func sessionId() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_inboundgroupsession_session_id(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeInboundGroupSession: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = InboundGroupSession
+
+    public static func lift(_ handle: UInt64) throws -> InboundGroupSession {
+        return InboundGroupSession(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: InboundGroupSession) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> InboundGroupSession {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: InboundGroupSession, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInboundGroupSession_lift(_ handle: UInt64) throws -> InboundGroupSession {
+    return try FfiConverterTypeInboundGroupSession.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInboundGroupSession_lower(_ value: InboundGroupSession) -> UInt64 {
+    return FfiConverterTypeInboundGroupSession.lower(value)
+}
+
+
+
+
+
+
+/**
+ * A pickled inbound group session that can be stored and later restored
+ */
+public protocol InboundGroupSessionPickleProtocol: AnyObject, Sendable {
+    
+    /**
+     * Create an encrypted pickle from this inbound group session pickle
+     *
+     * Note: This consumes the pickle as the encryption method takes ownership
+     */
+    func encrypt(pickleKey: Data) throws  -> String
+    
+}
+/**
+ * A pickled inbound group session that can be stored and later restored
+ */
+open class InboundGroupSessionPickle: InboundGroupSessionPickleProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_inboundgroupsessionpickle(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_inboundgroupsessionpickle(handle, $0) }
+    }
+
+    
+    /**
+     * Create an inbound group session pickle by decrypting an encrypted pickle
+     */
+public static func fromEncrypted(ciphertext: String, pickleKey: Data)throws  -> InboundGroupSessionPickle  {
+    return try  FfiConverterTypeInboundGroupSessionPickle_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_inboundgroupsessionpickle_from_encrypted(
+        FfiConverterString.lower(ciphertext),
+        FfiConverterData.lower(pickleKey),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Create an encrypted pickle from this inbound group session pickle
+     *
+     * Note: This consumes the pickle as the encryption method takes ownership
+     */
+open func encrypt(pickleKey: Data)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_method_inboundgroupsessionpickle_encrypt(self.uniffiCloneHandle(),
+        FfiConverterData.lower(pickleKey),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeInboundGroupSessionPickle: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = InboundGroupSessionPickle
+
+    public static func lift(_ handle: UInt64) throws -> InboundGroupSessionPickle {
+        return InboundGroupSessionPickle(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: InboundGroupSessionPickle) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> InboundGroupSessionPickle {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: InboundGroupSessionPickle, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInboundGroupSessionPickle_lift(_ handle: UInt64) throws -> InboundGroupSessionPickle {
+    return try FfiConverterTypeInboundGroupSessionPickle.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInboundGroupSessionPickle_lower(_ value: InboundGroupSessionPickle) -> UInt64 {
+    return FfiConverterTypeInboundGroupSessionPickle.lower(value)
 }
 
 
@@ -3880,6 +4924,334 @@ public func FfiConverterTypeMac_lift(_ handle: UInt64) throws -> Mac {
 #endif
 public func FfiConverterTypeMac_lower(_ value: Mac) -> UInt64 {
     return FfiConverterTypeMac.lower(value)
+}
+
+
+
+
+
+
+/**
+ * An encrypted Megolm message
+ *
+ * Contains the ciphertext, signature, and metadata for a group message
+ */
+public protocol MegolmMessageProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the ciphertext
+     */
+    func ciphertext()  -> Data
+    
+    /**
+     * Get the message index
+     */
+    func messageIndex()  -> UInt32
+    
+    /**
+     * Convert the message to a base64 string
+     */
+    func toBase64()  -> String
+    
+    /**
+     * Convert the message to bytes
+     */
+    func toBytes()  -> Data
+    
+}
+/**
+ * An encrypted Megolm message
+ *
+ * Contains the ciphertext, signature, and metadata for a group message
+ */
+open class MegolmMessage: MegolmMessageProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_megolmmessage(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_megolmmessage(handle, $0) }
+    }
+
+    
+    /**
+     * Create a MegolmMessage from a base64 string
+     */
+public static func fromBase64(input: String)throws  -> MegolmMessage  {
+    return try  FfiConverterTypeMegolmMessage_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_megolmmessage_from_base64(
+        FfiConverterString.lower(input),$0
+    )
+})
+}
+    
+    /**
+     * Create a MegolmMessage from bytes
+     */
+public static func fromBytes(bytes: Data)throws  -> MegolmMessage  {
+    return try  FfiConverterTypeMegolmMessage_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_megolmmessage_from_bytes(
+        FfiConverterData.lower(bytes),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Get the ciphertext
+     */
+open func ciphertext() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_megolmmessage_ciphertext(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the message index
+     */
+open func messageIndex() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_megolmmessage_message_index(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Convert the message to a base64 string
+     */
+open func toBase64() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_megolmmessage_to_base64(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Convert the message to bytes
+     */
+open func toBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_megolmmessage_to_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMegolmMessage: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = MegolmMessage
+
+    public static func lift(_ handle: UInt64) throws -> MegolmMessage {
+        return MegolmMessage(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: MegolmMessage) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MegolmMessage {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: MegolmMessage, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMegolmMessage_lift(_ handle: UInt64) throws -> MegolmMessage {
+    return try FfiConverterTypeMegolmMessage.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMegolmMessage_lower(_ value: MegolmMessage) -> UInt64 {
+    return FfiConverterTypeMegolmMessage.lower(value)
+}
+
+
+
+
+
+
+/**
+ * Configuration options for Megolm sessions
+ *
+ * This determines the version and encryption parameters used for the session
+ */
+public protocol MegolmSessionConfigProtocol: AnyObject, Sendable {
+    
+}
+/**
+ * Configuration options for Megolm sessions
+ *
+ * This determines the version and encryption parameters used for the session
+ */
+open class MegolmSessionConfig: MegolmSessionConfigProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_megolmsessionconfig(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_megolmsessionconfig(handle, $0) }
+    }
+
+    
+    /**
+     * Create a Version 1 session configuration
+     *
+     * Version 1 uses truncated MAC for better compatibility with older clients
+     */
+public static func version1() -> MegolmSessionConfig  {
+    return try!  FfiConverterTypeMegolmSessionConfig_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_megolmsessionconfig_version_1($0
+    )
+})
+}
+    
+    /**
+     * Create a Version 2 session configuration
+     *
+     * Version 2 uses full MAC for better security
+     */
+public static func version2() -> MegolmSessionConfig  {
+    return try!  FfiConverterTypeMegolmSessionConfig_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_megolmsessionconfig_version_2($0
+    )
+})
+}
+    
+
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMegolmSessionConfig: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = MegolmSessionConfig
+
+    public static func lift(_ handle: UInt64) throws -> MegolmSessionConfig {
+        return MegolmSessionConfig(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: MegolmSessionConfig) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MegolmSessionConfig {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: MegolmSessionConfig, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMegolmSessionConfig_lift(_ handle: UInt64) throws -> MegolmSessionConfig {
+    return try FfiConverterTypeMegolmSessionConfig.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMegolmSessionConfig_lower(_ value: MegolmSessionConfig) -> UInt64 {
+    return FfiConverterTypeMegolmSessionConfig.lower(value)
 }
 
 
@@ -6054,6 +7426,169 @@ public func FfiConverterTypeSessionConfig_lower(_ value: SessionConfig) -> UInt6
 
 
 /**
+ * A session key that can be used to create an InboundGroupSession
+ *
+ * Contains the signed session key for authentication
+ */
+public protocol SessionKeyProtocol: AnyObject, Sendable {
+    
+    /**
+     * Convert the session key to a base64 string
+     */
+    func toBase64()  -> String
+    
+    /**
+     * Convert the session key to bytes
+     */
+    func toBytes()  -> Data
+    
+}
+/**
+ * A session key that can be used to create an InboundGroupSession
+ *
+ * Contains the signed session key for authentication
+ */
+open class SessionKey: SessionKeyProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_sessionkey(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_sessionkey(handle, $0) }
+    }
+
+    
+    /**
+     * Create a SessionKey from a base64 string
+     */
+public static func fromBase64(input: String)throws  -> SessionKey  {
+    return try  FfiConverterTypeSessionKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_sessionkey_from_base64(
+        FfiConverterString.lower(input),$0
+    )
+})
+}
+    
+    /**
+     * Create a SessionKey from bytes
+     */
+public static func fromBytes(bytes: Data)throws  -> SessionKey  {
+    return try  FfiConverterTypeSessionKey_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_sessionkey_from_bytes(
+        FfiConverterData.lower(bytes),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Convert the session key to a base64 string
+     */
+open func toBase64() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_sessionkey_to_base64(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Convert the session key to bytes
+     */
+open func toBytes() -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_sessionkey_to_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSessionKey: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = SessionKey
+
+    public static func lift(_ handle: UInt64) throws -> SessionKey {
+        return SessionKey(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: SessionKey) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionKey {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: SessionKey, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSessionKey_lift(_ handle: UInt64) throws -> SessionKey {
+    return try FfiConverterTypeSessionKey.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSessionKey_lower(_ value: SessionKey) -> UInt64 {
+    return FfiConverterTypeSessionKey.lower(value)
+}
+
+
+
+
+
+
+/**
  * Session keys for an Olm session.
  */
 public protocol SessionKeysProtocol: AnyObject, Sendable {
@@ -6960,6 +8495,30 @@ fileprivate struct FfiConverterOptionTypeCurve25519PublicKey: FfiConverterRustBu
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeExportedSessionKey: FfiConverterRustBuffer {
+    typealias SwiftType = ExportedSessionKey?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeExportedSessionKey.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeExportedSessionKey.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceUInt16: FfiConverterRustBuffer {
     typealias SwiftType = [UInt16]
 
@@ -7151,6 +8710,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_method_curve25519secretkey_to_bytes() != 6874) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_method_decryptedmessage_message_index() != 29795) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_decryptedmessage_plaintext() != 2578) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_method_ecies_establish_inbound_channel() != 10409) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -7226,6 +8791,30 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_method_establishedsas_verify_mac() != 16256) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_method_exportedsessionkey_to_base64() != 1410) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_exportedsessionkey_to_bytes() != 61941) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_groupsession_encrypt() != 7876) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_groupsession_message_index() != 49074) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_groupsession_pickle() != 54089) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_groupsession_session_id() != 43559) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_groupsession_session_key() != 646) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_groupsessionpickle_encrypt() != 28135) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_method_identitykeys_curve25519() != 63709) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -7236,6 +8825,27 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_inboundcreationresult_message() != 15609) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_inboundgroupsession_compare() != 5392) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_inboundgroupsession_decrypt() != 28174) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_inboundgroupsession_export_at() != 62832) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_inboundgroupsession_first_known_index() != 31370) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_inboundgroupsession_pickle() != 54411) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_inboundgroupsession_session_id() != 41220) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_inboundgroupsessionpickle_encrypt() != 59401) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_initialmessage_ciphertext() != 7177) {
@@ -7257,6 +8867,18 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_mac_to_base64() != 19443) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_megolmmessage_ciphertext() != 43675) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_megolmmessage_message_index() != 22107) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_megolmmessage_to_base64() != 2385) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_megolmmessage_to_bytes() != 47654) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_message_ciphertext() != 8011) {
@@ -7382,6 +9004,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_method_session_session_keys() != 23544) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_method_sessionkey_to_base64() != 58428) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_sessionkey_to_bytes() != 13408) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_method_sessionkeys_base_key() != 40271) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -7466,10 +9094,52 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_constructor_ed25519signature_from_slice() != 57535) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_vodozemac_bindings_checksum_constructor_exportedsessionkey_from_base64() != 3734) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_exportedsessionkey_from_bytes() != 59495) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_groupsession_from_pickle() != 14852) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_groupsession_new() != 33028) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_groupsession_with_config() != 7668) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_groupsessionpickle_from_encrypted() != 20794) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_inboundgroupsession_from_pickle() != 63106) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_inboundgroupsession_import() != 60255) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_inboundgroupsession_new() != 39664) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_inboundgroupsessionpickle_from_encrypted() != 60286) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_vodozemac_bindings_checksum_constructor_initialmessage_decode() != 17149) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_constructor_keyid_from_u64() != 55467) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_megolmmessage_from_base64() != 41060) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_megolmmessage_from_bytes() != 2866) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_megolmsessionconfig_version_1() != 44802) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_megolmsessionconfig_version_2() != 29804) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_constructor_message_decode() != 46255) {
@@ -7509,6 +9179,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_constructor_sessionconfig_version_2() != 6566) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_sessionkey_from_base64() != 53706) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_sessionkey_from_bytes() != 2146) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_constructor_sessionpickle_from_encrypted() != 21229) {

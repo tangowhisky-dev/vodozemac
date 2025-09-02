@@ -55,6 +55,7 @@ cp "$SCRIPT_DIR/main.swift" "$TEMP_DIR/"
 cp "$SCRIPT_DIR/ecies_tests.swift" "$TEMP_DIR/"
 cp "$SCRIPT_DIR/sas_tests.swift" "$TEMP_DIR/"
 cp "$SCRIPT_DIR/olm_tests.swift" "$TEMP_DIR/"
+cp "$SCRIPT_DIR/megolm_tests.swift" "$TEMP_DIR/"
 cp "$TARGET_DIR/libvodozemac_bindings.dylib" "$TEMP_DIR/"
 
 echo "🔨 Compiling Swift test program..."
@@ -67,7 +68,7 @@ swiftc -o vodozemac_test \
     -L . \
     -lvodozemac_bindings \
     -import-objc-header vodozemacFFI.h \
-    vodozemac.swift main.swift ecies_tests.swift sas_tests.swift olm_tests.swift
+    vodozemac.swift main.swift ecies_tests.swift sas_tests.swift olm_tests.swift megolm_tests.swift
 
 echo "✅ Compilation successful!"
 
