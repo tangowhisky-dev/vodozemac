@@ -598,7 +598,6 @@ public protocol AccountProtocol: AnyObject, Sendable {
     func forgetFallbackKey()  -> Bool
     
     /**
-     * Get the currently unpublished one-time keys.
      * Generate a single new fallback key.
      */
     func generateFallbackKey()  -> Curve25519PublicKey?
@@ -622,6 +621,11 @@ public protocol AccountProtocol: AnyObject, Sendable {
      * Get the maximum number of one-time keys the client should keep on the server.
      */
     func maxNumberOfOneTimeKeys()  -> UInt64
+    
+    /**
+     * Get the currently unpublished one-time keys.
+     */
+    func oneTimeKeys()  -> [OneTimeKeyPair]
     
     /**
      * Convert the account into a struct which implements serde::Serialize and serde::Deserialize.
@@ -803,7 +807,6 @@ open func forgetFallbackKey() -> Bool  {
 }
     
     /**
-     * Get the currently unpublished one-time keys.
      * Generate a single new fallback key.
      */
 open func generateFallbackKey() -> Curve25519PublicKey?  {
@@ -849,6 +852,16 @@ open func markKeysAsPublished()  {try! rustCall() {
 open func maxNumberOfOneTimeKeys() -> UInt64  {
     return try!  FfiConverterUInt64.lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_method_account_max_number_of_one_time_keys(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the currently unpublished one-time keys.
+     */
+open func oneTimeKeys() -> [OneTimeKeyPair]  {
+    return try!  FfiConverterSequenceTypeOneTimeKeyPair.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_account_one_time_keys(self.uniffiCloneHandle(),$0
     )
 })
 }
@@ -4681,6 +4694,143 @@ public func FfiConverterTypeOneTimeKeyGenerationResult_lower(_ value: OneTimeKey
 
 
 /**
+ * A one-time key pair containing an ID and the key itself.
+ */
+public protocol OneTimeKeyPairProtocol: AnyObject, Sendable {
+    
+    /**
+     * Get the public key.
+     */
+    func key()  -> Curve25519PublicKey
+    
+    /**
+     * Get the key ID.
+     */
+    func keyId()  -> KeyId
+    
+}
+/**
+ * A one-time key pair containing an ID and the key itself.
+ */
+open class OneTimeKeyPair: OneTimeKeyPairProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_vodozemac_bindings_fn_clone_onetimekeypair(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        try! rustCall { uniffi_vodozemac_bindings_fn_free_onetimekeypair(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Get the public key.
+     */
+open func key() -> Curve25519PublicKey  {
+    return try!  FfiConverterTypeCurve25519PublicKey_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_onetimekeypair_key(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get the key ID.
+     */
+open func keyId() -> KeyId  {
+    return try!  FfiConverterTypeKeyId_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_onetimekeypair_key_id(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOneTimeKeyPair: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = OneTimeKeyPair
+
+    public static func lift(_ handle: UInt64) throws -> OneTimeKeyPair {
+        return OneTimeKeyPair(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: OneTimeKeyPair) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OneTimeKeyPair {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: OneTimeKeyPair, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOneTimeKeyPair_lift(_ handle: UInt64) throws -> OneTimeKeyPair {
+    return try FfiConverterTypeOneTimeKeyPair.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOneTimeKeyPair_lower(_ value: OneTimeKeyPair) -> UInt64 {
+    return FfiConverterTypeOneTimeKeyPair.lower(value)
+}
+
+
+
+
+
+
+/**
  * The result of an outbound ECIES channel establishment.
  */
 public protocol OutboundCreationResultProtocol: AnyObject, Sendable {
@@ -6856,6 +7006,31 @@ fileprivate struct FfiConverterSequenceTypeCurve25519PublicKey: FfiConverterRust
         return seq
     }
 }
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeOneTimeKeyPair: FfiConverterRustBuffer {
+    typealias SwiftType = [OneTimeKeyPair]
+
+    public static func write(_ value: [OneTimeKeyPair], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeOneTimeKeyPair.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [OneTimeKeyPair] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [OneTimeKeyPair]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeOneTimeKeyPair.read(from: &buf))
+        }
+        return seq
+    }
+}
 public func base64Decode(input: String)throws  -> Data  {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
     uniffi_vodozemac_bindings_fn_func_base64_decode(
@@ -6916,7 +7091,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_vodozemac_bindings_checksum_method_account_forget_fallback_key() != 59745) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_method_account_generate_fallback_key() != 46594) {
+    if (uniffi_vodozemac_bindings_checksum_method_account_generate_fallback_key() != 874) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_account_generate_one_time_keys() != 60005) {
@@ -6929,6 +7104,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_account_max_number_of_one_time_keys() != 2024) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_account_one_time_keys() != 4649) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_account_pickle() != 63367) {
@@ -7124,6 +7302,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_onetimekeygenerationresult_generated() != 27873) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_onetimekeypair_key() != 25509) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_onetimekeypair_key_id() != 44258) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_outboundcreationresult_ecies() != 10725) {

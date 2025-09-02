@@ -1202,14 +1202,16 @@ impl Account {
     }
 
     /// Get the currently unpublished one-time keys.
-    // Commented out due to Swift KeyId Hashable issues
-    // pub fn one_time_keys(&self) -> std::collections::HashMap<Arc<KeyId>, Arc<Curve25519PublicKey>> {
-    //     let inner = self.inner.read().unwrap();
-    //     inner.one_time_keys()
-    //         .into_iter()
-    //         .map(|(k, v)| (Arc::new(KeyId(k)), Arc::new(Curve25519PublicKey(v))))
-    //         .collect()
-    // }
+    pub fn one_time_keys(&self) -> Vec<Arc<OneTimeKeyPair>> {
+        let inner = self.inner.read().unwrap();
+        inner.one_time_keys()
+            .into_iter()
+            .map(|(k, v)| Arc::new(OneTimeKeyPair { 
+                key_id: Arc::new(KeyId(k)),
+                key: Arc::new(Curve25519PublicKey(v))
+            }))
+            .collect()
+    }
 
     /// Generate a single new fallback key.
     pub fn generate_fallback_key(&self) -> Option<Arc<Curve25519PublicKey>> {
@@ -1356,6 +1358,26 @@ impl IdentityKeys {
     /// The Curve25519 identity key, used for Diffie-Hellman operations.
     pub fn curve25519(&self) -> Arc<Curve25519PublicKey> {
         Arc::new(Curve25519PublicKey(self.inner.curve25519))
+    }
+}
+
+/// A one-time key pair containing an ID and the key itself.
+#[derive(uniffi::Object)]
+pub struct OneTimeKeyPair {
+    key_id: Arc<KeyId>,
+    key: Arc<Curve25519PublicKey>,
+}
+
+#[uniffi::export]
+impl OneTimeKeyPair {
+    /// Get the key ID.
+    pub fn key_id(&self) -> Arc<KeyId> {
+        self.key_id.clone()
+    }
+
+    /// Get the public key.
+    pub fn key(&self) -> Arc<Curve25519PublicKey> {
+        self.key.clone()
     }
 }
 
@@ -1553,17 +1575,17 @@ impl PreKeyMessage {
         Ok(Arc::new(PreKeyMessage { inner: pre_key_message }))
     }
 
-    /// Encode the PreKeyMessage as an array of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
-        self.inner.to_bytes()
-    }
-
     /// Try to decode the given string as an Olm PreKeyMessage.
     #[uniffi::constructor]
     pub fn from_base64(message: String) -> Result<Arc<PreKeyMessage>, VodozemacError> {
         let pre_key_message = vodozemac::olm::PreKeyMessage::from_base64(&message)
             .map_err(|e| VodozemacError::Decode(e.to_string()))?;
         Ok(Arc::new(PreKeyMessage { inner: pre_key_message }))
+    }
+
+    /// Encode the PreKeyMessage as an array of bytes.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.inner.to_bytes()
     }
 
     /// Encode the PreKeyMessage as a string.
