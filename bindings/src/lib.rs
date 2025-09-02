@@ -72,6 +72,18 @@ impl From<vodozemac::PickleError> for VodozemacError {
     }
 }
 
+impl From<vodozemac::SignatureError> for VodozemacError {
+    fn from(error: vodozemac::SignatureError) -> Self {
+        VodozemacError::Signature(error.to_string())
+    }
+}
+
+impl From<vodozemac::ProtoBufDecodeError> for VodozemacError {
+    fn from(error: vodozemac::ProtoBufDecodeError) -> Self {
+        VodozemacError::ProtoBufDecode(error.to_string())
+    }
+}
+
 // Enumslla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
