@@ -4859,6 +4859,28 @@ open class Mac: MacProtocol, @unchecked Sendable {
     }
 
     
+    /**
+     * Construct a MAC object from a base64-encoded string.
+     */
+public static func fromBase64(mac: String)throws  -> Mac  {
+    return try  FfiConverterTypeMac_lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
+    uniffi_vodozemac_bindings_fn_constructor_mac_from_base64(
+        FfiConverterString.lower(mac),$0
+    )
+})
+}
+    
+    /**
+     * Construct a MAC object from raw bytes.
+     */
+public static func fromSlice(bytes: Data) -> Mac  {
+    return try!  FfiConverterTypeMac_lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_constructor_mac_from_slice(
+        FfiConverterData.lower(bytes),$0
+    )
+})
+}
+    
 
     
     /**
@@ -9163,6 +9185,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_constructor_keyid_from_u64() != 55467) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_mac_from_base64() != 60136) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_constructor_mac_from_slice() != 34254) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_constructor_megolmmessage_from_base64() != 41060) {

@@ -331,7 +331,9 @@ func runSasTests() -> Bool {
         ("Raw Bytes Generation", testSasRawBytesGeneration),
         ("MAC Calculation and Verification", testSasMacCalculationAndVerification),
         ("Public Key Access", testSasPublicKeyAccess),
-        ("Different Info Strings", testSasDifferentInfoStrings)
+    ("Different Info Strings", testSasDifferentInfoStrings),
+    ("MAC Constructors", testSasMacConstructors),
+    ("Invalid Base64 MAC", testSasInvalidBase64Mac)
     ]
     
     var passed = 0
@@ -354,4 +356,92 @@ func runSasTests() -> Bool {
     print("Total: \(passed + failed)")
     
     return failed == 0
+}
+
+func testSasMacConstructors() -> Bool {
+    print("Testing SAS Mac constructors (fromBase64/fromSlice)...")
+    do {
+        let alice = Sas()
+        let bob = Sas()
+
+        let alicePk = try alice.publicKey()
+        let bobPk = try bob.publicKey()
+
+        let aliceEstablished = try alice.diffieHellman(theirPublicKey: bobPk)
+        let bobEstablished = try bob.diffieHellman(theirPublicKey: alicePk)
+
+        let input = "CONSTRUCTOR_TEST_KEY"
+        let info = "CONSTRUCTOR_TEST_INFO"
+
+        let mac = aliceEstablished.calculateMac(input: input, info: info)
+        let base64 = mac.toBase64()
+        let bytes = mac.asBytes()
+
+        // fromBase64
+        let macFromBase64 = try Mac.fromBase64(mac: base64)
+        guard macFromBase64.toBase64() == base64 else {
+            print("✗ Mac.fromBase64 round-trip failed")
+            return false
+        }
+
+        // fromSlice
+        let macFromSlice = Mac.fromSlice(bytes: bytes)
+        guard macFromSlice.asBytes() == bytes else {
+            print("✗ Mac.fromSlice round-trip failed")
+            return false
+        }
+
+        // Cross-compare with Bob
+        let bobMac = bobEstablished.calculateMac(input: input, info: info)
+        guard bobMac.toBase64() == base64 else {
+            print("✗ Bob's MAC doesn't match Alice's")
+            return false
+        }
+
+        print("✓ Mac constructors behave correctly")
+        return true
+    } catch {
+        print("✗ SAS Mac constructors test failed: \(error)")
+        return false
+    }
+}
+
+func testSasInvalidBase64Mac() -> Bool {
+    print("Testing SAS invalid-base64 MAC for libolm compatibility...")
+    do {
+        let alice = Sas()
+        let bob = Sas()
+
+        let alicePk = try alice.publicKey()
+        let bobPk = try bob.publicKey()
+
+        let aliceEstablished = try alice.diffieHellman(theirPublicKey: bobPk)
+        let bobEstablished = try bob.diffieHellman(theirPublicKey: alicePk)
+
+        let input = "INVALID_BASE64_TEST"
+        let info = "INVALID_BASE64_INFO"
+
+        let aInvalid = aliceEstablished.calculateMacInvalidBase64(input: input, info: info)
+        let bInvalid = bobEstablished.calculateMacInvalidBase64(input: input, info: info)
+
+        // They should be identical
+        guard aInvalid == bInvalid else {
+            print("✗ Invalid-base64 MAC strings don't match")
+            return false
+        }
+
+        // And they typically shouldn't decode with standard base64 decoder
+        do {
+            _ = try base64Decode(input: aInvalid)
+            print("⚠️ Unexpected: invalid-base64 MAC decoded successfully; continuing")
+        } catch {
+            print("✓ invalid-base64 MAC fails to decode with standard base64, as expected")
+        }
+
+        print("✓ Invalid-base64 MAC compatibility path works")
+        return true
+    } catch {
+        print("✗ SAS invalid-base64 MAC test failed: \(error)")
+        return false
+    }
 }

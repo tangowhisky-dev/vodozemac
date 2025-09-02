@@ -960,6 +960,20 @@ impl Mac {
     pub fn as_bytes(&self) -> Vec<u8> {
         self.inner.as_bytes().to_vec()
     }
+
+    /// Construct a MAC object from raw bytes.
+    #[uniffi::constructor]
+    pub fn from_slice(bytes: Vec<u8>) -> std::sync::Arc<Self> {
+        std::sync::Arc::new(Mac { inner: vodozemac::sas::Mac::from_slice(&bytes) })
+    }
+
+    /// Construct a MAC object from a base64-encoded string.
+    #[uniffi::constructor]
+    pub fn from_base64(mac: String) -> Result<std::sync::Arc<Self>, VodozemacError> {
+        let inner = vodozemac::sas::Mac::from_base64(&mac)
+            .map_err(|e| VodozemacError::Base64Decode(e.to_string()))?;
+        Ok(std::sync::Arc::new(Mac { inner }))
+    }
 }
 
 /// Bytes generated from a shared secret that can be used as the short auth string.

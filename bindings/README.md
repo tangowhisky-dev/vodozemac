@@ -180,6 +180,28 @@ See the existing implementations in `src/lib.rs`:
 - `Curve25519PublicKey`: Complex object with multiple constructors and error handling  
 - `Curve25519SecretKey`: Object returning other objects
 
+### SAS (Short Authentication String) notes
+
+SAS types are fully exported via macros:
+
+- `Sas`: `new()`, `public_key()`, `diffie_hellman(their_public_key)`, `diffie_hellman_with_raw(other_public_key_base64)`
+- `EstablishedSas`: `bytes(info)`, `bytes_raw(info, count)`, `calculate_mac(input, info)`, `calculate_mac_invalid_base64(input, info)`, `verify_mac(input, info, tag)`, `our_public_key()`, `their_public_key()`
+- `SasBytes`: `emoji_indices()`, `decimals()`, `as_bytes()`
+- `Mac`: `to_base64()`, `as_bytes()`, plus constructors `from_base64(mac)` and `from_slice(bytes)`
+
+Swift usage snippet:
+
+```swift
+let alice = Sas()
+let bob = Sas()
+let alicePk = try alice.publicKey()
+let established = try bob.diffieHellman(theirPublicKey: alicePk)
+let sas = established.bytes(info: "AGREED_INFO")
+let mac = established.calculateMac(input: "ID_KEY", info: "MAC_INFO")
+let base64 = mac.toBase64()
+let mac2 = try Mac.fromBase64(mac: base64)
+```
+
 ## Version Compatibility
 
 - UniFFI: 0.29.4
