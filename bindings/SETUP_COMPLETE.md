@@ -12,10 +12,10 @@ Successfully created Swift language bindings for the vodozemac crate using Mozil
 - Version synchronized with main library (0.9.0)
 
 ### ✅ 2. UniFFI Configuration
-- **UniFFI CLI Version**: 0.29.4 (compatible)
-- **UDL File**: `src/vodozemac.udl` with function definitions
-- **Rust Implementation**: `src/lib.rs` with wrapper functions
-- **Build Script**: `build.rs` for scaffolding generation
+- UniFFI CLI Version: 0.29.4 (compatible)
+- Macro-only bindings using `#[uniffi::export]` and `#[derive(uniffi::Object)]`
+- Rust implementation in `src/lib.rs` (no UDL file required)
+- Build script is minimal/no-op (no UDL scaffolding)
 
 ### ✅ 3. Generated Swift Bindings
 Located in `bindings/generated/`:
@@ -50,19 +50,17 @@ public func getVersion() -> String  // Returns "0.9.0"
 ```
 vodozemac/bindings/
 ├── src/
-│   ├── vodozemac.udl              # UniFFI interface definition
-│   ├── lib.rs                     # Rust wrapper implementation
-│   └── test_bindings.rs           # Rust test suite (7 tests)
+│   ├── lib.rs                     # Rust bindings (proc-macros, no UDL)
+│   ├── test_bindings.rs           # Rust test suite (7 tests)
+│   └── tests.rs                   # Additional tests/helpers
 ├── generated/                     # Swift bindings (auto-generated)
 │   ├── vodozemac.swift            # Swift API
 │   ├── vodozemacFFI.h             # C FFI header
 │   └── vodozemacFFI.modulemap     # Xcode module map
-├── tests/
-│   └── VodozemacBindingsTests.swift  # Swift test suite for Xcode
 ├── docs/
 │   └── XcodeIntegrationGuide.md   # Complete integration guide
 ├── Cargo.toml                     # Rust project configuration
-├── build.rs                       # UniFFI build script
+├── build.rs                       # Minimal/no-op (no UDL scaffolding)
 ├── Makefile                       # Build automation
 ├── README.md                      # Project documentation
 └── test_swift_generation.sh       # Swift generation test script
@@ -97,10 +95,9 @@ let decoded = base64Decode(input: encoded)
 ### Future Expansion Roadmap
 The bindings framework is ready for expansion. To add more vodozemac functionality:
 
-1. **Update UDL** (`src/vodozemac.udl`) with new function signatures
-2. **Implement wrappers** in `src/lib.rs`
-3. **Regenerate bindings** with `make generate`
-4. **Add tests** for new functionality
+1. Add Rust exports with `#[uniffi::export]` (and derive `uniffi::Object` for classes)
+2. Regenerate Swift with `bindings/generate_bindings.sh`
+3. Add Swift tests under `bindings/xcode-test`
 
 **Planned additions:**
 - [ ] Olm Account creation and management

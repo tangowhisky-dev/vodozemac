@@ -702,8 +702,6 @@ func runSasTestsSection() {
 }
 
 func runOlmTestsSection() {
-    print("\n🔐 Testing OLM (Olm) Double Ratchet Protocol...")
-    print("================================================")
     
     if runOlmTests() {
         print("\n✅ All OLM tests PASSED")

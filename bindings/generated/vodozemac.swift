@@ -8293,34 +8293,34 @@ public enum VodozemacError: Swift.Error {
 
     
     
-    case Base64Decode(message: String)
-    
-    case ProtoBufDecode(message: String)
-    
-    case Decode(message: String)
-    
-    case DehydratedDevice(message: String)
-    
-    case Key(message: String)
-    
-    case LibolmPickle(message: String)
-    
-    case Pickle(message: String)
-    
-    case Signature(message: String)
-    
-    case Ecies(message: String)
-    
-    case MegolmDecryption(message: String)
-    
-    case OlmDecryption(message: String)
-    
-    case SessionCreation(message: String)
-    
-    case SessionKeyDecode(message: String)
-    
-    case Sas(message: String)
-    
+    case Base64Decode(String
+    )
+    case ProtoBufDecode(String
+    )
+    case Decode(String
+    )
+    case DehydratedDevice(String
+    )
+    case Key(String
+    )
+    case LibolmPickle(String
+    )
+    case Pickle(String
+    )
+    case Signature(String
+    )
+    case Ecies(String
+    )
+    case MegolmDecryption(String
+    )
+    case OlmDecryption(String
+    )
+    case SessionCreation(String
+    )
+    case SessionKeyDecode(String
+    )
+    case Sas(String
+    )
 }
 
 
@@ -8338,63 +8338,49 @@ public struct FfiConverterTypeVodozemacError: FfiConverterRustBuffer {
 
         
         case 1: return .Base64Decode(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 2: return .ProtoBufDecode(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 3: return .Decode(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 4: return .DehydratedDevice(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 5: return .Key(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 6: return .LibolmPickle(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 7: return .Pickle(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 8: return .Signature(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 9: return .Ecies(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 10: return .MegolmDecryption(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 11: return .OlmDecryption(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 12: return .SessionCreation(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 13: return .SessionKeyDecode(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
         case 14: return .Sas(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
+            try FfiConverterString.read(from: &buf)
+            )
 
-        default: throw UniffiInternalError.unexpectedEnumCase
+         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
@@ -8404,36 +8390,76 @@ public struct FfiConverterTypeVodozemacError: FfiConverterRustBuffer {
         
 
         
-        case .Base64Decode(_ /* message is ignored*/):
-            writeInt(&buf, Int32(1))
-        case .ProtoBufDecode(_ /* message is ignored*/):
-            writeInt(&buf, Int32(2))
-        case .Decode(_ /* message is ignored*/):
-            writeInt(&buf, Int32(3))
-        case .DehydratedDevice(_ /* message is ignored*/):
-            writeInt(&buf, Int32(4))
-        case .Key(_ /* message is ignored*/):
-            writeInt(&buf, Int32(5))
-        case .LibolmPickle(_ /* message is ignored*/):
-            writeInt(&buf, Int32(6))
-        case .Pickle(_ /* message is ignored*/):
-            writeInt(&buf, Int32(7))
-        case .Signature(_ /* message is ignored*/):
-            writeInt(&buf, Int32(8))
-        case .Ecies(_ /* message is ignored*/):
-            writeInt(&buf, Int32(9))
-        case .MegolmDecryption(_ /* message is ignored*/):
-            writeInt(&buf, Int32(10))
-        case .OlmDecryption(_ /* message is ignored*/):
-            writeInt(&buf, Int32(11))
-        case .SessionCreation(_ /* message is ignored*/):
-            writeInt(&buf, Int32(12))
-        case .SessionKeyDecode(_ /* message is ignored*/):
-            writeInt(&buf, Int32(13))
-        case .Sas(_ /* message is ignored*/):
-            writeInt(&buf, Int32(14))
-
         
+        case let .Base64Decode(v1):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .ProtoBufDecode(v1):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .Decode(v1):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .DehydratedDevice(v1):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .Key(v1):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .LibolmPickle(v1):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .Pickle(v1):
+            writeInt(&buf, Int32(7))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .Signature(v1):
+            writeInt(&buf, Int32(8))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .Ecies(v1):
+            writeInt(&buf, Int32(9))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .MegolmDecryption(v1):
+            writeInt(&buf, Int32(10))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .OlmDecryption(v1):
+            writeInt(&buf, Int32(11))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .SessionCreation(v1):
+            writeInt(&buf, Int32(12))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .SessionKeyDecode(v1):
+            writeInt(&buf, Int32(13))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .Sas(v1):
+            writeInt(&buf, Int32(14))
+            FfiConverterString.write(v1, into: &buf)
+            
         }
     }
 }
@@ -8590,6 +8616,9 @@ fileprivate struct FfiConverterSequenceTypeOneTimeKeyPair: FfiConverterRustBuffe
         return seq
     }
 }
+/**
+ * Decode a base64 string into bytes with proper error handling
+ */
 public func base64Decode(input: String)throws  -> Data  {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeVodozemacError_lift) {
     uniffi_vodozemac_bindings_fn_func_base64_decode(
@@ -8597,6 +8626,9 @@ public func base64Decode(input: String)throws  -> Data  {
     )
 })
 }
+/**
+ * Encode bytes as a base64 string
+ */
 public func base64Encode(input: Data) -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_func_base64_encode(
@@ -8604,6 +8636,9 @@ public func base64Encode(input: Data) -> String  {
     )
 })
 }
+/**
+ * Get the version of vodozemac that is being used
+ */
 public func getVersion() -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_func_get_version($0
@@ -8626,13 +8661,13 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_func_base64_decode() != 3805) {
+    if (uniffi_vodozemac_bindings_checksum_func_base64_decode() != 40395) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_func_base64_encode() != 38810) {
+    if (uniffi_vodozemac_bindings_checksum_func_base64_encode() != 40365) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_vodozemac_bindings_checksum_func_get_version() != 41157) {
+    if (uniffi_vodozemac_bindings_checksum_func_get_version() != 16884) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_account_create_inbound_session() != 4017) {

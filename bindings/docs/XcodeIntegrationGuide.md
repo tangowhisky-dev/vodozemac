@@ -117,7 +117,6 @@ echo "Vodozemac bindings updated successfully!"
 Set the build script's input and output files:
 
 **Input Files:**
-- `$(PROJECT_DIR)/../vodozemac/bindings/src/vodozemac.udl`
 - `$(PROJECT_DIR)/../vodozemac/bindings/src/lib.rs`
 
 **Output Files:**

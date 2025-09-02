@@ -86,7 +86,7 @@ use std::sync::Arc;
 
 // Wrapper error types that UniFFI can handle
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum VodozemacError {
     #[error("Base64 decode error: {0}")]
     Base64Decode(String),
@@ -170,7 +170,7 @@ impl From<vodozemac::PickleError> for VodozemacError {
 }
 
 // Enums
-#[derive(Debug, Clone, PartialEq)]
+#[derive(uniffi::Enum, Debug, Clone, PartialEq)]
 pub enum MessageType {
     Normal,
     PreKey,
@@ -185,7 +185,7 @@ impl From<&vodozemac::olm::OlmMessage> for MessageType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(uniffi::Enum, Debug, Clone, PartialEq)]
 pub enum SessionOrdering {
     Equal,
     Better,
@@ -205,17 +205,20 @@ impl From<vodozemac::megolm::SessionOrdering> for SessionOrdering {
 }
 
 /// Decode a base64 string into bytes with proper error handling
-fn base64_decode(input: String) -> Result<Vec<u8>, VodozemacError> {
+#[uniffi::export]
+pub fn base64_decode(input: String) -> Result<Vec<u8>, VodozemacError> {
     vz_base64_decode(&input).map_err(|e| VodozemacError::Base64Decode(e.to_string()))
 }
 
 /// Encode bytes as a base64 string  
-fn base64_encode(input: Vec<u8>) -> String {
+#[uniffi::export]
+pub fn base64_encode(input: Vec<u8>) -> String {
     vz_base64_encode(&input)
 }
 
 /// Get the version of vodozemac that is being used
-fn get_version() -> String {
+#[uniffi::export]
+pub fn get_version() -> String {
     VZ_VERSION.to_string()
 }
 
@@ -2281,7 +2284,8 @@ impl From<vodozemac::megolm::SessionKey> for SessionKey {
     }
 }
 
-uniffi::include_scaffolding!("vodozemac");
+// Macro-only UniFFI: generate FFI scaffolding and metadata for the `vodozemac` namespace.
+uniffi::setup_scaffolding!("vodozemac");
 
 #[cfg(test)]
 mod test_bindings;

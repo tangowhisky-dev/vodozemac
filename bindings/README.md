@@ -4,10 +4,7 @@ This directory contains UniFFI bindings for the vodozemac cryptographic library,
 
 ## Architecture
 
-The bindings use [Mozilla UniFFI](https://mozilla.github.io/uniffi-rs/) to automatically generate language bindings. There are two approaches supported:
-
-1. **UDL-based**: Define interfaces in `.udl` files (good for simple types and functions)
-2. **Procedural Macros**: Use `#[uniffi::export]` macros (recommended for complex objects)
+The bindings use [Mozilla UniFFI](https://mozilla.github.io/uniffi-rs/) to automatically generate language bindings. This crate now relies exclusively on procedural macros via `#[derive(uniffi::Object)]` and `#[uniffi::export]`. UDL files are no longer used.
 
 ## Quick Start
 
@@ -32,12 +29,11 @@ The bindings use [Mozilla UniFFI](https://mozilla.github.io/uniffi-rs/) to autom
 ```
 bindings/
 ├── src/
-│   ├── lib.rs              # Main Rust implementations
-│   └── vodozemac.udl       # UDL interface definitions
+│   └── lib.rs              # Main Rust implementations (proc-macro based)
 ├── generated/              # Auto-generated bindings (Swift/Kotlin/Python)
 ├── xcode-test/             # Swift testing infrastructure  
 ├── generate_bindings.sh    # Main build script
-└── README.md              # This file
+└── README.md               # This file
 ```
 
 ## Adding New API Bindings
@@ -89,45 +85,9 @@ impl YourType {
 
 With procedural macros, **don't add interface definitions** to the `.udl` file. UniFFI will automatically generate the interface from the macro annotations.
 
-### ❌ Avoid: UDL Interfaces for Objects
+### Note on UDL
 
-This approach causes checksum mismatches:
-
-```udl
-// ❌ DON'T DO THIS for complex objects
-interface YourType {
-    constructor();
-    bytes to_bytes();
-}
-```
-
-### ✅ When to Use UDL
-
-UDL is still appropriate for:
-
-1. **Namespace functions**:
-   ```udl
-   namespace vodozemac {
-       string utility_function(bytes data);
-   }
-   ```
-
-2. **Simple enums**:
-   ```udl
-   enum ErrorType {
-       "NetworkError",
-       "ParseError",
-   };
-   ```
-
-3. **Error types**:
-   ```udl
-   [Error]
-   enum VodozemacError {
-       "Key",
-       "Decode",
-   };
-   ```
+UDL support has been removed from this bindings crate to avoid API checksum mismatches and duplication. If reintegration is needed later, add a `build.rs` with `uniffi::generate_scaffolding` and reintroduce a `.udl` file.
 
 ## Key Patterns
 

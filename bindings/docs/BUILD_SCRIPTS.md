@@ -95,10 +95,10 @@ cp target/aarch64-apple-ios/release/libvodozemac_uniffi.a "$BUILD_DIR/libvodozem
 # Generate Swift bindings
 echo "Generating Swift bindings..."
 cd "$PROJECT_ROOT/bindings"
-uniffi-bindgen generate vodozemac.udl \
+uniffi-bindgen generate \
   --language swift \
   --out-dir "$BUILD_DIR/swift" \
-  --lib-file vodozemac_uniffi/target/aarch64-apple-ios/release/libvodozemac_uniffi.a
+  --library vodozemac_uniffi/target/aarch64-apple-ios/release/libvodozemac_uniffi.a
 
 echo "iOS build complete!"
 echo "Device library: $BUILD_DIR/libvodozemac_uniffi_device.a"
@@ -153,10 +153,10 @@ cp target/aarch64-apple-ios/release/libvodozemac_uniffi.a "$DEVICE_FRAMEWORK/$FR
 
 # Generate bindings and copy headers
 cd "$PROJECT_ROOT/bindings"
-uniffi-bindgen generate vodozemac.udl \
+uniffi-bindgen generate \
   --language swift \
   --out-dir "$BUILD_DIR/swift" \
-  --lib-file vodozemac_uniffi/target/aarch64-apple-ios/release/libvodozemac_uniffi.a
+  --library vodozemac_uniffi/target/aarch64-apple-ios/release/libvodozemac_uniffi.a
 
 # Copy headers to frameworks
 cp "$BUILD_DIR/swift/vodozemacFFI.h" "$DEVICE_FRAMEWORK/Headers/"
@@ -305,10 +305,10 @@ cp target/i686-linux-android/release/libvodozemac_uniffi.so "$BUILD_DIR/jniLibs/
 # Generate Kotlin bindings
 echo "Generating Kotlin bindings..."
 cd "$PROJECT_ROOT/bindings"
-uniffi-bindgen generate vodozemac.udl \
+uniffi-bindgen generate \
   --language kotlin \
   --out-dir "$BUILD_DIR/kotlin" \
-  --lib-file vodozemac_uniffi/target/aarch64-linux-android/release/libvodozemac_uniffi.so
+  --library vodozemac_uniffi/target/aarch64-linux-android/release/libvodozemac_uniffi.so
 
 echo "Android build complete!"
 echo "Native libraries: $BUILD_DIR/jniLibs/"

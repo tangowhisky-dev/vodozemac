@@ -57,16 +57,11 @@ generate-release: build-release
 	@echo "🏗️  Generating Swift bindings (release)..."
 	mkdir -p $(GENERATED_DIR)
 	$(UNIFFI_CLI) generate --library $(LIBRARY_RELEASE) --language swift --out-dir $(GENERATED_DIR)
-swift-test: generate
-	@echo "🧪 Running Swift integration test..."
-	cd $(GENERATED_DIR) && swift -I . -L ../../target/debug -Xlinker -rpath -Xlinker ../../target/debug -lvodozemac_bindings ../test_bindings.swift
-	@echo "🧪 Running Rust tests..."
-	cargo test
 
 # Run Swift test script (requires bindings to be generated)
 swift-test: generate
 	@echo "🧪 Running Swift integration test..."
-	cd $(GENERATED_DIR) && swift -I . -L ../../../target/debug -lvodozemac_bindings ../test_bindings.swift
+	cd $(GENERATED_DIR) && swift -I . -L ../../target/debug -Xlinker -rpath -Xlinker ../../target/debug -lvodozemac_bindings ../test_bindings.swift
 
 # Clean build artifacts
 clean:
@@ -106,4 +101,4 @@ check-uniffi:
 watch:
 	@echo "👀 Watching for changes... (Press Ctrl+C to stop)"
 	@echo "This requires 'entr' to be installed: brew install entr"
-	find src/ -name "*.rs" -o -name "*.udl" | entr make generate
+	find src/ -name "*.rs" | entr make generate
