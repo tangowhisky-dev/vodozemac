@@ -1264,6 +1264,11 @@ public protocol Curve25519PublicKeyProtocol: AnyObject, Sendable {
     func asBytes()  -> Data
     
     /**
+     * Return the length in bytes of a Curve25519 public key (parity with Rust LENGTH const).
+     */
+    func length()  -> UInt32
+    
+    /**
      * Convert the public key to a base64 string
      *
      * Pattern: Method returning primitive type (String)
@@ -1385,6 +1390,16 @@ public static func fromSlice(bytes: Data)throws  -> Curve25519PublicKey  {
 open func asBytes() -> Data  {
     return try!  FfiConverterData.lift(try! rustCall() {
     uniffi_vodozemac_bindings_fn_method_curve25519publickey_as_bytes(self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Return the length in bytes of a Curve25519 public key (parity with Rust LENGTH const).
+     */
+open func length() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_vodozemac_bindings_fn_method_curve25519publickey_length(self.uniffiCloneHandle(),$0
     )
 })
 }
@@ -8815,6 +8830,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_as_bytes() != 31053) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_length() != 22847) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_vodozemac_bindings_checksum_method_curve25519publickey_to_base64() != 25568) {

@@ -84,6 +84,9 @@ impl From<vodozemac::PickleError> for VodozemacError {
 use vodozemac::{base64_decode as vz_base64_decode, base64_encode as vz_base64_encode, VERSION as VZ_VERSION};
 use std::sync::Arc;
 
+// Re-export ProtoBufDecodeError for API parity with main crate
+pub use vodozemac::ProtoBufDecodeError;
+
 // Wrapper error types that UniFFI can handle
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -329,6 +332,11 @@ impl Curve25519PublicKey {
     /// Pattern: Method returning primitive type (String)
     pub fn to_base64(&self) -> String {
         self.0.to_base64()
+    }
+
+    /// Return the length in bytes of a Curve25519 public key (parity with Rust LENGTH const).
+    pub fn length(&self) -> u32 {
+        vodozemac::Curve25519PublicKey::LENGTH as u32
     }
 }
 
