@@ -35,6 +35,43 @@ impl From<base64::DecodeError> for VodozemacError {
     }
 }
 
+// Error conversions for OLM types
+impl From<vodozemac::olm::SessionCreationError> for VodozemacError {
+    fn from(error: vodozemac::olm::SessionCreationError) -> Self {
+        VodozemacError::SessionCreation(error.to_string())
+    }
+}
+
+impl From<vodozemac::olm::DecryptionError> for VodozemacError {
+    fn from(error: vodozemac::olm::DecryptionError) -> Self {
+        VodozemacError::OlmDecryption(error.to_string())
+    }
+}
+
+impl From<vodozemac::DecodeError> for VodozemacError {
+    fn from(error: vodozemac::DecodeError) -> Self {
+        VodozemacError::Decode(error.to_string())
+    }
+}
+
+impl From<vodozemac::LibolmPickleError> for VodozemacError {
+    fn from(error: vodozemac::LibolmPickleError) -> Self {
+        VodozemacError::LibolmPickle(error.to_string())
+    }
+}
+
+impl From<vodozemac::DehydratedDeviceError> for VodozemacError {
+    fn from(error: vodozemac::DehydratedDeviceError) -> Self {
+        VodozemacError::DehydratedDevice(error.to_string())
+    }
+}
+
+impl From<vodozemac::PickleError> for VodozemacError {
+    fn from(error: vodozemac::PickleError) -> Self {
+        VodozemacError::Pickle(error.to_string())
+    }
+}
+
 // Enumslla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -173,7 +210,7 @@ fn get_version() -> String {
 /// Key ID wrapper for UniFFI
 /// 
 /// Pattern: Simple object with constructor and method
-#[derive(uniffi::Object)]
+#[derive(uniffi::Object, Clone, PartialEq, Eq, Hash)]
 pub struct KeyId(pub vodozemac::KeyId);
 
 #[uniffi::export]
@@ -206,7 +243,7 @@ impl From<vodozemac::KeyId> for KeyId {
 /// Wrapper around vodozemac::Curve25519PublicKey
 /// 
 /// Pattern: Complex object with multiple constructors, error handling, and various return types
-#[derive(uniffi::Object)]
+#[derive(uniffi::Object, Clone)]
 pub struct Curve25519PublicKey(vodozemac::Curve25519PublicKey);
 
 #[uniffi::export]
@@ -1064,6 +1101,670 @@ impl EstablishedSas {
     /// establish the shared secret.
     pub fn their_public_key(&self) -> Arc<Curve25519PublicKey> {
         Arc::new(Curve25519PublicKey(self.inner.their_public_key()))
+    }
+}
+
+// ===== OLM (Olm) CRYPTOGRAPHIC STRUCTS =====
+
+/// An Olm Account manages all cryptographic keys used on a device.
+#[derive(uniffi::Object)]
+pub struct Account {
+    inner: std::sync::RwLock<vodozemac::olm::Account>,
+}
+
+#[uniffi::export]
+impl Account {
+    /// Create a new Account with fresh identity and one-time keys.
+    #[uniffi::constructor]
+    pub fn new() -> Arc<Account> {
+        Arc::new(Account {
+            inner: std::sync::RwLock::new(vodozemac::olm::Account::new()),
+        })
+    }
+
+    /// Get the IdentityKeys of this Account
+    pub fn identity_keys(&self) -> Arc<IdentityKeys> {
+        let inner = self.inner.read().unwrap();
+        Arc::new(IdentityKeys { inner: inner.identity_keys() })
+    }
+
+    /// Get a copy of the account's public Ed25519 key
+    pub fn ed25519_key(&self) -> Arc<Ed25519PublicKey> {
+        let inner = self.inner.read().unwrap();
+        Arc::new(Ed25519PublicKey(inner.ed25519_key()))
+    }
+
+    /// Get a copy of the account's public Curve25519 key
+    pub fn curve25519_key(&self) -> Arc<Curve25519PublicKey> {
+        let inner = self.inner.read().unwrap();
+        Arc::new(Curve25519PublicKey(inner.curve25519_key()))
+    }
+
+    /// Sign the given message using our Ed25519 identity key.
+    pub fn sign(&self, message: Vec<u8>) -> Arc<Ed25519Signature> {
+        let inner = self.inner.read().unwrap();
+        Arc::new(Ed25519Signature(inner.sign(message)))
+    }
+
+    /// Get the maximum number of one-time keys the client should keep on the server.
+    pub fn max_number_of_one_time_keys(&self) -> u64 {
+        let inner = self.inner.read().unwrap();
+        inner.max_number_of_one_time_keys() as u64
+    }
+
+    /// Create a Session with the given identity key and one-time key.
+    pub fn create_outbound_session(
+        &self, 
+        session_config: Arc<SessionConfig>,
+        identity_key: Arc<Curve25519PublicKey>,
+        one_time_key: Arc<Curve25519PublicKey>
+    ) -> Arc<Session> {
+        let inner = self.inner.read().unwrap();
+        let session = inner.create_outbound_session(
+            session_config.inner,
+            identity_key.0,
+            one_time_key.0,
+        );
+        Arc::new(Session { inner: std::sync::RwLock::new(session) })
+    }
+
+    /// Create a Session from the given PreKeyMessage message and identity key
+    pub fn create_inbound_session(
+        &self,
+        their_identity_key: Arc<Curve25519PublicKey>,
+        pre_key_message: Arc<PreKeyMessage>
+    ) -> Result<Arc<OlmInboundCreationResult>, VodozemacError> {
+        let mut inner = self.inner.write().unwrap();
+        let result = inner.create_inbound_session(their_identity_key.0, &pre_key_message.inner)
+            .map_err(|e| VodozemacError::SessionCreation(e.to_string()))?;
+        
+        Ok(Arc::new(OlmInboundCreationResult {
+            session: Arc::new(Session { inner: std::sync::RwLock::new(result.session) }),
+            plaintext: result.plaintext,
+        }))
+    }
+
+    /// Generates the supplied number of one time keys.
+    pub fn generate_one_time_keys(&self, count: u64) -> Arc<OneTimeKeyGenerationResult> {
+        let mut inner = self.inner.write().unwrap();
+        let result = inner.generate_one_time_keys(count as usize);
+        
+        Arc::new(OneTimeKeyGenerationResult {
+            generated: result.created.into_iter().map(|key| Curve25519PublicKey(key)).collect(),
+            discarded: result.removed.into_iter().map(|key| Curve25519PublicKey(key)).collect(),
+        })
+    }
+
+    /// Get the number of one-time keys we have stored locally.
+    pub fn stored_one_time_key_count(&self) -> u64 {
+        let inner = self.inner.read().unwrap();
+        inner.stored_one_time_key_count() as u64
+    }
+
+    /// Get the currently unpublished one-time keys.
+    // Commented out due to Swift KeyId Hashable issues
+    // pub fn one_time_keys(&self) -> std::collections::HashMap<Arc<KeyId>, Arc<Curve25519PublicKey>> {
+    //     let inner = self.inner.read().unwrap();
+    //     inner.one_time_keys()
+    //         .into_iter()
+    //         .map(|(k, v)| (Arc::new(KeyId(k)), Arc::new(Curve25519PublicKey(v))))
+    //         .collect()
+    // }
+
+    /// Generate a single new fallback key.
+    pub fn generate_fallback_key(&self) -> Option<Arc<Curve25519PublicKey>> {
+        let mut inner = self.inner.write().unwrap();
+        inner.generate_fallback_key().map(|key| Arc::new(Curve25519PublicKey(key)))
+    }
+
+    /// Get the currently unpublished fallback key.
+    // Commented out due to Swift KeyId Hashable issues
+    // pub fn fallback_key(&self) -> std::collections::HashMap<Arc<KeyId>, Arc<Curve25519PublicKey>> {
+    //     let inner = self.inner.read().unwrap();
+    //     inner.fallback_key()
+    //         .into_iter()
+    //         .map(|(k, v)| (Arc::new(KeyId(k)), Arc::new(Curve25519PublicKey(v))))
+    //         .collect()
+    // }
+
+    /// The Account stores at most two private parts of the fallback key.
+    pub fn forget_fallback_key(&self) -> bool {
+        let mut inner = self.inner.write().unwrap();
+        inner.forget_fallback_key()
+    }
+
+    /// Mark all currently unpublished one-time and fallback keys as published.
+    pub fn mark_keys_as_published(&self) {
+        let mut inner = self.inner.write().unwrap();
+        inner.mark_keys_as_published();
+    }
+
+    /// Convert the account into a struct which implements serde::Serialize and serde::Deserialize.
+    pub fn pickle(&self) -> Arc<AccountPickle> {
+        let inner = self.inner.read().unwrap();
+        Arc::new(AccountPickle { inner: inner.pickle() })
+    }
+
+    /// Restore an Account from a previously saved AccountPickle.
+    #[uniffi::constructor]
+    pub fn from_pickle(pickle: Arc<AccountPickle>) -> Result<Arc<Account>, VodozemacError> {
+        // Extract the inner value from Arc - this consumes the Arc
+        let account_pickle = Arc::try_unwrap(pickle).map_err(|_| VodozemacError::Key("Cannot access pickle - still referenced elsewhere".to_string()))?.inner;
+        let account = vodozemac::olm::Account::from(account_pickle);
+        Ok(Arc::new(Account {
+            inner: std::sync::RwLock::new(account),
+        }))
+    }
+
+    /// Create an Account object by unpickling an account pickle in libolm legacy pickle format.
+    #[uniffi::constructor]
+    pub fn from_libolm_pickle(pickle: String, pickle_key: Vec<u8>) -> Result<Arc<Account>, VodozemacError> {
+        let account = vodozemac::olm::Account::from_libolm_pickle(&pickle, &pickle_key)
+            .map_err(|e| VodozemacError::LibolmPickle(e.to_string()))?;
+        Ok(Arc::new(Account {
+            inner: std::sync::RwLock::new(account),
+        }))
+    }
+
+    /// Pickle an Account into a libolm pickle format.
+    pub fn to_libolm_pickle(&self, pickle_key: Vec<u8>) -> Result<String, VodozemacError> {
+        let inner = self.inner.read().unwrap();
+        inner.to_libolm_pickle(&pickle_key)
+            .map_err(|e| VodozemacError::LibolmPickle(e.to_string()))
+    }
+
+    /// Create a dehydrated device from the account.
+    pub fn to_dehydrated_device(&self, key: Vec<u8>) -> Result<DehydratedDeviceResult, VodozemacError> {
+        if key.len() != 32 {
+            return Err(VodozemacError::Key("Key must be exactly 32 bytes".to_string()));
+        }
+        
+        let key_array: [u8; 32] = key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
+        let inner = self.inner.read().unwrap();
+        let result = inner.to_dehydrated_device(&key_array)
+            .map_err(|e| VodozemacError::DehydratedDevice(e.to_string()))?;
+        
+        Ok(DehydratedDeviceResult {
+            ciphertext: result.ciphertext,
+            nonce: result.nonce,
+        })
+    }
+
+    /// Create an Account object from a dehydrated device.
+    #[uniffi::constructor]
+    pub fn from_dehydrated_device(ciphertext: String, nonce: String, key: Vec<u8>) -> Result<Arc<Account>, VodozemacError> {
+        if key.len() != 32 {
+            return Err(VodozemacError::Key("Key must be exactly 32 bytes".to_string()));
+        }
+        
+        let key_array: [u8; 32] = key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
+        let account = vodozemac::olm::Account::from_dehydrated_device(&ciphertext, &nonce, &key_array)
+            .map_err(|e| VodozemacError::DehydratedDevice(e.to_string()))?;
+        Ok(Arc::new(Account {
+            inner: std::sync::RwLock::new(account),
+        }))
+    }
+}
+
+/// A struct representing the pickled Account.
+#[derive(uniffi::Object)]
+pub struct AccountPickle {
+    pub(crate) inner: vodozemac::olm::AccountPickle,
+}
+
+#[uniffi::export]
+impl AccountPickle {
+    /// Serialize and encrypt the pickle using the given key.
+    pub fn encrypt(self: Arc<Self>, pickle_key: Vec<u8>) -> Result<String, VodozemacError> {
+        if pickle_key.len() != 32 {
+            return Err(VodozemacError::Key("Pickle key must be exactly 32 bytes".to_string()));
+        }
+        
+        let key_array: [u8; 32] = pickle_key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
+        // Extract the inner value from Arc - this consumes the Arc
+        let pickle = Arc::try_unwrap(self).map_err(|_| VodozemacError::Key("Cannot access pickle - still referenced elsewhere".to_string()))?.inner;
+        Ok(pickle.encrypt(&key_array))
+    }
+
+    /// Obtain a pickle from a ciphertext by decrypting and deserializing using the given key.
+    #[uniffi::constructor]
+    pub fn from_encrypted(ciphertext: String, pickle_key: Vec<u8>) -> Result<Arc<AccountPickle>, VodozemacError> {
+        if pickle_key.len() != 32 {
+            return Err(VodozemacError::Key("Pickle key must be exactly 32 bytes".to_string()));
+        }
+        
+        let key_array: [u8; 32] = pickle_key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
+        let pickle = vodozemac::olm::AccountPickle::from_encrypted(&ciphertext, &key_array)
+            .map_err(|e| VodozemacError::Pickle(e.to_string()))?;
+        Ok(Arc::new(AccountPickle { inner: pickle }))
+    }
+}
+
+/// The two main identity keys of an Account.
+#[derive(uniffi::Object)]
+pub struct IdentityKeys {
+    inner: vodozemac::olm::IdentityKeys,
+}
+
+#[uniffi::export]
+impl IdentityKeys {
+    /// The Ed25519 identity key, used for signing.
+    pub fn ed25519(&self) -> Arc<Ed25519PublicKey> {
+        Arc::new(Ed25519PublicKey(self.inner.ed25519))
+    }
+
+    /// The Curve25519 identity key, used for Diffie-Hellman operations.
+    pub fn curve25519(&self) -> Arc<Curve25519PublicKey> {
+        Arc::new(Curve25519PublicKey(self.inner.curve25519))
+    }
+}
+
+/// The result when creating an inbound Olm session.
+#[derive(uniffi::Object)]
+pub struct OlmInboundCreationResult {
+    session: Arc<Session>,
+    plaintext: Vec<u8>,
+}
+
+#[uniffi::export]
+impl OlmInboundCreationResult {
+    /// Get the created session.
+    pub fn session(&self) -> Arc<Session> {
+        self.session.clone()
+    }
+
+    /// Get the decrypted plaintext of the message.
+    pub fn plaintext(&self) -> Vec<u8> {
+        self.plaintext.clone()
+    }
+}
+
+/// Result of generating one-time keys.
+#[derive(uniffi::Object)]
+pub struct OneTimeKeyGenerationResult {
+    generated: Vec<Curve25519PublicKey>,
+    discarded: Vec<Curve25519PublicKey>,
+}
+
+#[uniffi::export]
+impl OneTimeKeyGenerationResult {
+    /// Get the generated keys.
+    pub fn generated(&self) -> Vec<Arc<Curve25519PublicKey>> {
+        self.generated.iter()
+            .map(|key| Arc::new(key.clone()))
+            .collect()
+    }
+
+    /// Get the discarded keys.
+    pub fn discarded(&self) -> Vec<Arc<Curve25519PublicKey>> {
+        self.discarded.iter()
+            .map(|key| Arc::new(key.clone()))
+            .collect()
+    }
+}
+
+/// Result from dehydrated device creation.
+#[derive(uniffi::Record)]
+pub struct DehydratedDeviceResult {
+    pub ciphertext: String,
+    pub nonce: String,
+}
+
+/// An encrypted Olm message.
+#[derive(uniffi::Object)]
+pub struct OlmMessage {
+    inner: vodozemac::olm::OlmMessage,
+}
+
+#[uniffi::export]
+impl OlmMessage {
+    /// Get the type of this message.
+    pub fn message_type(&self) -> MessageType {
+        match &self.inner {
+            vodozemac::olm::OlmMessage::Normal(_) => MessageType::Normal,
+            vodozemac::olm::OlmMessage::PreKey(_) => MessageType::PreKey,
+        }
+    }
+
+    /// Try to decode the given string as an OlmMessage.
+    #[uniffi::constructor]
+    pub fn from_base64(message: String) -> Result<Arc<OlmMessage>, VodozemacError> {
+        let decoded = vodozemac::base64_decode(&message)
+            .map_err(|e| VodozemacError::Base64Decode(e.to_string()))?;
+        
+        // Try to decode as PreKey first (type 0), then as Normal (type 1)
+        let olm_message = vodozemac::olm::OlmMessage::from_parts(0, &decoded)
+            .or_else(|_| vodozemac::olm::OlmMessage::from_parts(1, &decoded))
+            .map_err(|e| VodozemacError::Decode(e.to_string()))?;
+            
+        Ok(Arc::new(OlmMessage { inner: olm_message }))
+    }
+
+    /// Encode the OlmMessage as a base64 string.
+    pub fn to_base64(&self) -> String {
+        let (_, bytes) = self.inner.to_parts();
+        vodozemac::base64_encode(bytes)
+    }
+}
+
+/// An encrypted Olm message.
+#[derive(uniffi::Object)]
+pub struct OlmNormalMessage {
+    inner: vodozemac::olm::Message,
+}
+
+#[uniffi::export]
+impl OlmNormalMessage {
+    /// The ratchet key that was used to encrypt this message.
+    pub fn ratchet_key(&self) -> Arc<Curve25519PublicKey> {
+        Arc::new(Curve25519PublicKey(self.inner.ratchet_key()))
+    }
+
+    /// The index of the chain that was used when the message was encrypted.
+    pub fn chain_index(&self) -> u64 {
+        self.inner.chain_index()
+    }
+
+    /// The actual ciphertext of the message.
+    pub fn ciphertext(&self) -> Vec<u8> {
+        self.inner.ciphertext().to_vec()
+    }
+
+    /// The version of the Olm message.
+    pub fn version(&self) -> u8 {
+        self.inner.version()
+    }
+
+    /// Has the MAC been truncated in this Olm message.
+    pub fn mac_truncated(&self) -> bool {
+        self.inner.mac_truncated()
+    }
+
+    /// Try to decode the given byte slice as an Olm Message.
+    #[uniffi::constructor]
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Arc<OlmNormalMessage>, VodozemacError> {
+        let message = vodozemac::olm::Message::from_bytes(&bytes)
+            .map_err(|e| VodozemacError::Decode(e.to_string()))?;
+        Ok(Arc::new(OlmNormalMessage { inner: message }))
+    }
+
+    /// Encode the Message as an array of bytes.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.inner.to_bytes()
+    }
+
+    /// Try to decode the given string as an Olm Message.
+    #[uniffi::constructor]
+    pub fn from_base64(message: String) -> Result<Arc<OlmNormalMessage>, VodozemacError> {
+        let message = vodozemac::olm::Message::from_base64(&message)
+            .map_err(|e| VodozemacError::Decode(e.to_string()))?;
+        Ok(Arc::new(OlmNormalMessage { inner: message }))
+    }
+
+    /// Encode the Message as a string.
+    pub fn to_base64(&self) -> String {
+        self.inner.to_base64()
+    }
+}
+
+/// An encrypted Olm pre-key message.
+#[derive(uniffi::Object)]
+pub struct PreKeyMessage {
+    inner: vodozemac::olm::PreKeyMessage,
+}
+
+#[uniffi::export]
+impl PreKeyMessage {
+    /// The one-time key that was used by the receiver of the message.
+    pub fn one_time_key(&self) -> Arc<Curve25519PublicKey> {
+        Arc::new(Curve25519PublicKey(self.inner.one_time_key()))
+    }
+
+    /// The base key that was created just in time by the sender of the message.
+    pub fn base_key(&self) -> Arc<Curve25519PublicKey> {
+        Arc::new(Curve25519PublicKey(self.inner.base_key()))
+    }
+
+    /// The long term identity key of the sender of the message.
+    pub fn identity_key(&self) -> Arc<Curve25519PublicKey> {
+        Arc::new(Curve25519PublicKey(self.inner.identity_key()))
+    }
+
+    /// The collection of all keys required for establishing an Olm Session.
+    pub fn session_keys(&self) -> Arc<SessionKeys> {
+        Arc::new(SessionKeys { inner: self.inner.session_keys() })
+    }
+
+    /// Returns the globally unique session ID, in base64-encoded form.
+    pub fn session_id(&self) -> String {
+        self.inner.session_id()
+    }
+
+    /// The actual message that contains the ciphertext.
+    pub fn message(&self) -> Arc<OlmNormalMessage> {
+        Arc::new(OlmNormalMessage { inner: self.inner.message().clone() })
+    }
+
+    /// Try to decode the given byte slice as an Olm PreKeyMessage.
+    #[uniffi::constructor]
+    pub fn from_bytes(message: Vec<u8>) -> Result<Arc<PreKeyMessage>, VodozemacError> {
+        let pre_key_message = vodozemac::olm::PreKeyMessage::from_bytes(&message)
+            .map_err(|e| VodozemacError::Decode(e.to_string()))?;
+        Ok(Arc::new(PreKeyMessage { inner: pre_key_message }))
+    }
+
+    /// Encode the PreKeyMessage as an array of bytes.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.inner.to_bytes()
+    }
+
+    /// Try to decode the given string as an Olm PreKeyMessage.
+    #[uniffi::constructor]
+    pub fn from_base64(message: String) -> Result<Arc<PreKeyMessage>, VodozemacError> {
+        let pre_key_message = vodozemac::olm::PreKeyMessage::from_base64(&message)
+            .map_err(|e| VodozemacError::Decode(e.to_string()))?;
+        Ok(Arc::new(PreKeyMessage { inner: pre_key_message }))
+    }
+
+    /// Encode the PreKeyMessage as a string.
+    pub fn to_base64(&self) -> String {
+        self.inner.to_base64()
+    }
+}
+
+/// The public part of a ratchet key pair.
+#[derive(uniffi::Object)]
+pub struct RatchetPublicKey {
+    inner: vodozemac::olm::RatchetPublicKey,
+}
+
+#[uniffi::export]
+impl RatchetPublicKey {
+    /// Convert the RatchetPublicKey to a base64 encoded string.
+    pub fn to_base64(&self) -> String {
+        self.inner.as_ref().to_base64()
+    }
+
+    /// Try to create a RatchetPublicKey from the given base64 encoded string.
+    #[uniffi::constructor]
+    pub fn from_base64(key: String) -> Result<Arc<RatchetPublicKey>, VodozemacError> {
+        let curve_key = vodozemac::Curve25519PublicKey::from_base64(&key)
+            .map_err(|e| VodozemacError::Key(e.to_string()))?;
+        let bytes = curve_key.to_bytes();
+        let mut array = [0u8; 32];
+        array.copy_from_slice(&bytes);
+        let ratchet_key = vodozemac::olm::RatchetPublicKey::from(array);
+        Ok(Arc::new(RatchetPublicKey { inner: ratchet_key }))
+    }
+}
+
+/// An Olm session represents one end of an encrypted communication channel.
+#[derive(uniffi::Object)]
+pub struct Session {
+    inner: std::sync::RwLock<vodozemac::olm::Session>,
+}
+
+#[uniffi::export]
+impl Session {
+    /// Returns the globally unique session ID, in base64-encoded form.
+    pub fn session_id(&self) -> String {
+        let inner = self.inner.read().unwrap();
+        inner.session_id()
+    }
+
+    /// Have we ever received and decrypted a message from the other side?
+    pub fn has_received_message(&self) -> bool {
+        let inner = self.inner.read().unwrap();
+        inner.has_received_message()
+    }
+
+    /// Encrypt the plaintext and construct an OlmMessage.
+    pub fn encrypt(&self, plaintext: Vec<u8>) -> Arc<OlmMessage> {
+        let mut inner = self.inner.write().unwrap();
+        let olm_message = inner.encrypt(plaintext);
+        Arc::new(OlmMessage { inner: olm_message })
+    }
+
+    /// Get the keys associated with this session.
+    pub fn session_keys(&self) -> Arc<SessionKeys> {
+        let inner = self.inner.read().unwrap();
+        Arc::new(SessionKeys { inner: inner.session_keys() })
+    }
+
+    /// Get the SessionConfig that this Session is configured to use.
+    pub fn session_config(&self) -> Arc<SessionConfig> {
+        let inner = self.inner.read().unwrap();
+        Arc::new(SessionConfig { inner: inner.session_config() })
+    }
+
+    /// Try to decrypt an Olm message.
+    pub fn decrypt(&self, message: Arc<OlmMessage>) -> Result<Vec<u8>, VodozemacError> {
+        let mut inner = self.inner.write().unwrap();
+        inner.decrypt(&message.inner)
+            .map_err(|e| VodozemacError::OlmDecryption(e.to_string()))
+    }
+
+    /// Convert the session into a struct which implements serde::Serialize and serde::Deserialize.
+    pub fn pickle(&self) -> Arc<SessionPickle> {
+        let inner = self.inner.read().unwrap();
+        Arc::new(SessionPickle { inner: inner.pickle() })
+    }
+
+    /// Restore a Session from a previously saved SessionPickle.
+    #[uniffi::constructor]
+    pub fn from_pickle(pickle: Arc<SessionPickle>) -> Result<Arc<Session>, VodozemacError> {
+        // Extract the inner value from Arc - this consumes the Arc
+        let session_pickle = Arc::try_unwrap(pickle).map_err(|_| VodozemacError::Key("Cannot access pickle - still referenced elsewhere".to_string()))?.inner;
+        let session = vodozemac::olm::Session::from_pickle(session_pickle);
+        Ok(Arc::new(Session {
+            inner: std::sync::RwLock::new(session),
+        }))
+    }
+
+    /// Create a Session object by unpickling a session pickle in libolm legacy pickle format.
+    #[uniffi::constructor]
+    pub fn from_libolm_pickle(pickle: String, pickle_key: Vec<u8>) -> Result<Arc<Session>, VodozemacError> {
+        let session = vodozemac::olm::Session::from_libolm_pickle(&pickle, &pickle_key)
+            .map_err(|e| VodozemacError::LibolmPickle(e.to_string()))?;
+        Ok(Arc::new(Session {
+            inner: std::sync::RwLock::new(session),
+        }))
+    }
+}
+
+/// Session configuration for Olm sessions.
+#[derive(uniffi::Object)]
+pub struct SessionConfig {
+    inner: vodozemac::olm::SessionConfig,
+}
+
+#[uniffi::export]
+impl SessionConfig {
+    /// Create a SessionConfig for Olm version 1.
+    #[uniffi::constructor]
+    pub fn version_1() -> Arc<SessionConfig> {
+        Arc::new(SessionConfig {
+            inner: vodozemac::olm::SessionConfig::version_1(),
+        })
+    }
+
+    /// Create a SessionConfig for Olm version 2.
+    #[uniffi::constructor]
+    pub fn version_2() -> Arc<SessionConfig> {
+        Arc::new(SessionConfig {
+            inner: vodozemac::olm::SessionConfig::version_2(),
+        })
+    }
+
+    /// Create a default SessionConfig.
+    #[uniffi::constructor]
+    pub fn default() -> Arc<SessionConfig> {
+        Arc::new(SessionConfig {
+            inner: vodozemac::olm::SessionConfig::default(),
+        })
+    }
+}
+
+/// Session keys for an Olm session.
+#[derive(uniffi::Object)]
+pub struct SessionKeys {
+    inner: vodozemac::olm::SessionKeys,
+}
+
+#[uniffi::export]
+impl SessionKeys {
+    /// The identity key, a long-lived Ed25519 key.
+    pub fn identity_key(&self) -> Arc<Curve25519PublicKey> {
+        Arc::new(Curve25519PublicKey(self.inner.identity_key))
+    }
+
+    /// The base key, a single-use Curve25519 key.
+    pub fn base_key(&self) -> Arc<Curve25519PublicKey> {
+        Arc::new(Curve25519PublicKey(self.inner.base_key))
+    }
+
+    /// The one time key, a single-use Curve25519 key.
+    pub fn one_time_key(&self) -> Arc<Curve25519PublicKey> {
+        Arc::new(Curve25519PublicKey(self.inner.one_time_key))
+    }
+
+    /// Returns the globally unique session ID, in base64-encoded form.
+    pub fn session_id(&self) -> String {
+        self.inner.session_id()
+    }
+}
+
+/// A struct representing the pickled Session.
+#[derive(uniffi::Object)]
+pub struct SessionPickle {
+    inner: vodozemac::olm::SessionPickle,
+}
+
+#[uniffi::export]
+impl SessionPickle {
+    /// Serialize and encrypt the pickle using the given key.
+    pub fn encrypt(self: Arc<Self>, pickle_key: Vec<u8>) -> Result<String, VodozemacError> {
+        if pickle_key.len() != 32 {
+            return Err(VodozemacError::Key("Pickle key must be exactly 32 bytes".to_string()));
+        }
+        
+        let key_array: [u8; 32] = pickle_key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
+        // Extract the inner value from Arc - this consumes the Arc
+        let pickle = Arc::try_unwrap(self).map_err(|_| VodozemacError::Key("Cannot access pickle - still referenced elsewhere".to_string()))?.inner;
+        Ok(pickle.encrypt(&key_array))
+    }
+
+    /// Obtain a pickle from a ciphertext by decrypting and deserializing using the given key.
+    #[uniffi::constructor]
+    pub fn from_encrypted(ciphertext: String, pickle_key: Vec<u8>) -> Result<Arc<SessionPickle>, VodozemacError> {
+        if pickle_key.len() != 32 {
+            return Err(VodozemacError::Key("Pickle key must be exactly 32 bytes".to_string()));
+        }
+        
+        let key_array: [u8; 32] = pickle_key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
+        let pickle = vodozemac::olm::SessionPickle::from_encrypted(&ciphertext, &key_array)
+            .map_err(|e| VodozemacError::Pickle(e.to_string()))?;
+        Ok(Arc::new(SessionPickle { inner: pickle }))
     }
 }
 

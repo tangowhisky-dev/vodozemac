@@ -701,7 +701,20 @@ func runSasTestsSection() {
     }
 }
 
+func runOlmTestsSection() {
+    print("\n🔐 Testing OLM (Olm) Double Ratchet Protocol...")
+    print("================================================")
+    
+    if runOlmTests() {
+        print("\n✅ All OLM tests PASSED")
+    } else {
+        print("\n❌ Some OLM tests FAILED")
+        exit(1)
+    }
+}
+
 // Run the tests
 runTests()
 runEciesTestsSection()
 runSasTestsSection()
+runOlmTestsSection()
