@@ -1949,8 +1949,13 @@ impl GroupSession {
     /// Create a group session from a pickle  
     #[uniffi::constructor]
     pub fn from_pickle(pickle: Arc<GroupSessionPickle>) -> Result<Arc<Self>, VodozemacError> {
-        // Extract the inner value from Arc - this consumes the Arc
-        let session_pickle = Arc::try_unwrap(pickle).map_err(|_| VodozemacError::Key("Failed to unwrap GroupSessionPickle".to_string()))?.inner;
+        // Safely take the inner pickle once even if multiple Arcs exist
+        let session_pickle = pickle
+            .inner
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or_else(|| VodozemacError::Key("Failed to unwrap GroupSessionPickle".to_string()))?;
         let session = vodozemac::megolm::GroupSession::from_pickle(session_pickle);
         Ok(Arc::new(Self {
             inner: std::sync::Mutex::new(session),
@@ -1981,7 +1986,7 @@ impl GroupSession {
     pub fn pickle(&self) -> Arc<GroupSessionPickle> {
         let session = self.inner.lock().unwrap();
         let pickle = session.pickle();
-        Arc::new(GroupSessionPickle { inner: pickle })
+    Arc::new(GroupSessionPickle { inner: std::sync::Mutex::new(Some(pickle)) })
     }
 
     /// Get the session ID
@@ -2000,7 +2005,7 @@ impl From<vodozemac::megolm::GroupSession> for GroupSession {
 /// A pickled group session that can be stored and later restored
 #[derive(uniffi::Object)]
 pub struct GroupSessionPickle {
-    inner: vodozemac::megolm::GroupSessionPickle,
+    inner: std::sync::Mutex<Option<vodozemac::megolm::GroupSessionPickle>>,
 }
 
 #[uniffi::export]
@@ -2014,9 +2019,13 @@ impl GroupSessionPickle {
         }
         
         let key_array: [u8; 32] = pickle_key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
-        let inner_pickle = Arc::try_unwrap(self)
-            .map_err(|_| VodozemacError::Key("Failed to unwrap GroupSessionPickle".to_string()))?
-            .inner;
+        // Consume the pickle once even if there are multiple Arc references
+        let inner_pickle = self
+            .inner
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or_else(|| VodozemacError::Key("Failed to unwrap GroupSessionPickle".to_string()))?;
         let encrypted = inner_pickle.encrypt(&key_array);
         Ok(encrypted)
     }
@@ -2030,13 +2039,13 @@ impl GroupSessionPickle {
         
         let key_array: [u8; 32] = pickle_key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
         let pickle = vodozemac::megolm::GroupSessionPickle::from_encrypted(&ciphertext, &key_array)?;
-        Ok(Arc::new(Self { inner: pickle }))
+        Ok(Arc::new(Self { inner: std::sync::Mutex::new(Some(pickle)) }))
     }
 }
 
 impl From<vodozemac::megolm::GroupSessionPickle> for GroupSessionPickle {
     fn from(pickle: vodozemac::megolm::GroupSessionPickle) -> Self {
-        Self { inner: pickle }
+        Self { inner: std::sync::Mutex::new(Some(pickle)) }
     }
 }
 
@@ -2071,8 +2080,13 @@ impl InboundGroupSession {
     /// Create an inbound group session from a pickle
     #[uniffi::constructor]
     pub fn from_pickle(pickle: Arc<InboundGroupSessionPickle>) -> Result<Arc<Self>, VodozemacError> {
-        // Extract the inner value from Arc - this consumes the Arc
-        let session_pickle = Arc::try_unwrap(pickle).map_err(|_| VodozemacError::Key("Failed to unwrap InboundGroupSessionPickle".to_string()))?.inner;
+        // Safely take the inner pickle once even if multiple Arcs exist
+        let session_pickle = pickle
+            .inner
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or_else(|| VodozemacError::Key("Failed to unwrap InboundGroupSessionPickle".to_string()))?;
         let session = vodozemac::megolm::InboundGroupSession::from_pickle(session_pickle);
         Ok(Arc::new(Self {
             inner: std::sync::Mutex::new(session),
@@ -2108,14 +2122,14 @@ impl InboundGroupSession {
     pub fn compare(&self, other: Arc<InboundGroupSession>) -> SessionOrdering {
         let mut session = self.inner.lock().unwrap();
         let mut other_session = other.inner.lock().unwrap();
-        session.compare(&mut *other_session).into()
+    session.compare(&mut other_session).into()
     }
 
     /// Create a pickle from this inbound group session
     pub fn pickle(&self) -> Arc<InboundGroupSessionPickle> {
         let session = self.inner.lock().unwrap();
         let pickle = session.pickle();
-        Arc::new(InboundGroupSessionPickle { inner: pickle })
+    Arc::new(InboundGroupSessionPickle { inner: std::sync::Mutex::new(Some(pickle)) })
     }
 }
 
@@ -2128,7 +2142,7 @@ impl From<vodozemac::megolm::InboundGroupSession> for InboundGroupSession {
 /// A pickled inbound group session that can be stored and later restored
 #[derive(uniffi::Object)]
 pub struct InboundGroupSessionPickle {
-    inner: vodozemac::megolm::InboundGroupSessionPickle,
+    inner: std::sync::Mutex<Option<vodozemac::megolm::InboundGroupSessionPickle>>,
 }
 
 #[uniffi::export]
@@ -2142,9 +2156,13 @@ impl InboundGroupSessionPickle {
         }
         
         let key_array: [u8; 32] = pickle_key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
-        let inner_pickle = Arc::try_unwrap(self)
-            .map_err(|_| VodozemacError::Key("Failed to unwrap InboundGroupSessionPickle".to_string()))?
-            .inner;
+        // Consume the pickle once even if there are multiple Arc references
+        let inner_pickle = self
+            .inner
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or_else(|| VodozemacError::Key("Failed to unwrap InboundGroupSessionPickle".to_string()))?;
         let encrypted = inner_pickle.encrypt(&key_array);
         Ok(encrypted)
     }
@@ -2158,13 +2176,13 @@ impl InboundGroupSessionPickle {
         
         let key_array: [u8; 32] = pickle_key.try_into().map_err(|_| VodozemacError::Key("Invalid key size".to_string()))?;
         let pickle = vodozemac::megolm::InboundGroupSessionPickle::from_encrypted(&ciphertext, &key_array)?;
-        Ok(Arc::new(Self { inner: pickle }))
+    Ok(Arc::new(Self { inner: std::sync::Mutex::new(Some(pickle)) }))
     }
 }
 
 impl From<vodozemac::megolm::InboundGroupSessionPickle> for InboundGroupSessionPickle {
     fn from(pickle: vodozemac::megolm::InboundGroupSessionPickle) -> Self {
-        Self { inner: pickle }
+    Self { inner: std::sync::Mutex::new(Some(pickle)) }
     }
 }
 
