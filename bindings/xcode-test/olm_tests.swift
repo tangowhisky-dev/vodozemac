@@ -41,10 +41,6 @@ func testOlmAccountBasics() -> Bool {
         
         print("   ✓ Account basic functionality works")
         return true
-        
-    } catch {
-        print("   ❌ FAILED: \(error)")
-        return false
     }
 }
 
@@ -113,10 +109,6 @@ func testOlmIdentityKeys() -> Bool {
         print("   ✓ IdentityKeys working correctly")
         
         return true
-        
-    } catch {
-        print("   ❌ FAILED: \(error)")
-        return false
     }
 }
 
@@ -154,10 +146,6 @@ func testOlmOneTimeKeys() -> Bool {
         
         print("   ✓ Keys are unique: \(key1Base64) != \(key2Base64)")
         return true
-        
-    } catch {
-        print("   ❌ FAILED: \(error)")
-        return false
     }
 }
 
@@ -169,7 +157,7 @@ func testOlmSessionCreation() -> Bool {
         let alice = Account()
         let bob = Account()
         
-        let aliceIdentity = alice.identityKeys()
+        let _ = alice.identityKeys()
         let bobIdentity = bob.identityKeys()
         
         // Bob generates one-time keys
@@ -194,10 +182,6 @@ func testOlmSessionCreation() -> Bool {
         print("   ✓ Has received message: \(hasReceived)")
         
         return true
-        
-    } catch {
-        print("   ❌ FAILED: \(error)")
-        return false
     }
 }
 
@@ -378,10 +362,6 @@ func testOlmSessionConfig() -> Bool {
         print("   ✓ SessionV2 ID: \(sessionV2.sessionId())")
         
         return true
-        
-    } catch {
-        print("   ❌ FAILED: \(error)")
-        return false
     }
 }
 
@@ -485,8 +465,8 @@ func testOlmIntegrationFlow() -> Bool {
         let bobSessionPickle = bobSession.pickle()
         
         // Restore from pickles
-        let restoredAliceAccount = try Account.fromPickle(pickle: aliceAccountPickle)
-        let restoredBobAccount = try Account.fromPickle(pickle: bobAccountPickle)
+        let _ = try Account.fromPickle(pickle: aliceAccountPickle)
+        let _ = try Account.fromPickle(pickle: bobAccountPickle)
         let restoredAliceSession = try Session.fromPickle(pickle: aliceSessionPickle)
         let restoredBobSession = try Session.fromPickle(pickle: bobSessionPickle)
         
