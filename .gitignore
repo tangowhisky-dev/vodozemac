@@ -10,3 +10,6 @@ coverage.xml
 /bindings/generated/swift/ios-device
 /bindings/generated/swift/ios-simulator
 /bindings/generated/swift/macos
+/bindings/tests/modern_test_vectors/target
+/bindings/tests/rust_reference/target
+/bindings/tests/swift_tests/.build

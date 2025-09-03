@@ -1,0 +1,38 @@
+{
+  "account_tests": [],
+  "session_tests": [],
+  "group_session_tests": [],
+  "sas_tests": [],
+  "ecies_tests": [],
+  "utility_tests": {
+    "base64_encode_tests": [
+      {
+        "input": "Hello, World!",
+        "output": "SGVsbG8sIFdvcmxkIQ"
+      },
+      {
+        "input": "The quick brown fox jumps over the lazy dog",
+        "output": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw"
+      },
+      {
+        "input": "",
+        "output": ""
+      }
+    ],
+    "base64_decode_tests": [
+      {
+        "input": "SGVsbG8sIFdvcmxkIQ",
+        "output": "Hello, World!"
+      },
+      {
+        "input": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw",
+        "output": "The quick brown fox jumps over the lazy dog"
+      },
+      {
+        "input": "",
+        "output": ""
+      }
+    ],
+    "version": "0.9.0"
+  }
+}

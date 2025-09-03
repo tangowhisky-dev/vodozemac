@@ -3,6 +3,8 @@ name = "rust_reference"
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+
 [dependencies]
 vodozemac = { path = "../../../", default-features = false, features = ["libolm-compat"] }
 serde = { version = "1.0", features = ["derive"] }

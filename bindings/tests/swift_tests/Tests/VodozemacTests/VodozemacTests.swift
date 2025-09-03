@@ -152,12 +152,45 @@ final class VodozemacTests: XCTestCase {
     var testVectors: TestVectors!
     
     override func setUpWithError() throws {
-        guard let url = Bundle.module.url(forResource: "test_vectors", withExtension: "json") else {
-            XCTFail("Could not find test_vectors.json")
+        // Look for test_vectors.json in the test bundle's resource path
+        let testBundle = Bundle(for: type(of: self))
+        
+        // Try multiple locations for the test vectors file
+        var url: URL?
+        let resourceNames = ["test_vectors", "../test_vectors", "test_vectors"]
+        let extensions = ["json", "json", "json"]
+        
+        for (resourceName, ext) in zip(resourceNames, extensions) {
+            url = testBundle.url(forResource: resourceName, withExtension: ext)
+            if url != nil {
+                break
+            }
+        }
+        
+        // If not found in bundle, try relative to the test execution directory
+        if url == nil {
+            let fileManager = FileManager.default
+            let currentDir = fileManager.currentDirectoryPath
+            let testVectorsPaths = [
+                "\(currentDir)/../test_vectors.json",
+                "\(currentDir)/test_vectors.json",
+                "\(currentDir)/Tests/test_vectors.json"
+            ]
+            
+            for path in testVectorsPaths {
+                if fileManager.fileExists(atPath: path) {
+                    url = URL(fileURLWithPath: path)
+                    break
+                }
+            }
+        }
+        
+        guard let testVectorURL = url else {
+            XCTFail("Could not find test_vectors.json in any expected location")
             return
         }
         
-        let data = try Data(contentsOf: url)
+        let data = try Data(contentsOf: testVectorURL)
         testVectors = try JSONDecoder().decode(TestVectors.self, from: data)
     }
     
@@ -210,19 +243,23 @@ final class VodozemacTests: XCTestCase {
         
         // Test Ed25519 signing
         let message = "Test message for signing"
-        let signature = ed25519Secret.sign(message: message)
+        let messageData = Data(message.utf8)
+        let signature = ed25519Secret.sign(message: messageData)
         
-        let isValid = ed25519Public.verify(signature: signature, message: message)
-        XCTAssertTrue(isValid)
-        print("✓ Ed25519 signing and verification works")
+        do {
+            try ed25519Public.verify(message: messageData, signature: signature)
+            print("✓ Ed25519 signing and verification works")
+        } catch {
+            XCTFail("Ed25519 verification failed: \(error)")
+        }
     }
     
     func testMegolmBasics() throws {
         print("🧪 Testing Megolm group session basics...")
         
-        // Create group session with default config
+        // Create group session with version 1 config to match inbound session
         let config = MegolmSessionConfig.version1()
-        let groupSession = GroupSession(sessionConfig: config)
+        let groupSession = GroupSession.withConfig(config: config)
         
         XCTAssertFalse(groupSession.sessionId().isEmpty)
         print("✓ Group session creation works")
@@ -234,15 +271,17 @@ final class VodozemacTests: XCTestCase {
         
         // Test encryption
         let plaintext = "Hello, group!"
-        let encrypted = groupSession.encrypt(plaintext: plaintext)
+        let plaintextData = Data(plaintext.utf8)
+        let encrypted = groupSession.encrypt(plaintext: plaintextData)
         XCTAssertFalse(encrypted.toBase64().isEmpty)
         print("✓ Group message encryption works")
         
         // Test inbound session creation and decryption
-        let inboundSession = try InboundGroupSession(sessionKey: sessionKey)
+        let inboundConfig = MegolmSessionConfig.version1()
+        let inboundSession = InboundGroupSession(sessionKey: sessionKey, config: inboundConfig)
         let decryptedResult = try inboundSession.decrypt(message: encrypted)
         
-        let decryptedString = String(data: Data(decryptedResult.plaintext), encoding: .utf8)!
+        let decryptedString = String(data: decryptedResult.plaintext(), encoding: .utf8)!
         XCTAssertEqual(decryptedString, plaintext)
         print("✓ Group message decryption works")
     }
@@ -257,7 +296,7 @@ final class VodozemacTests: XCTestCase {
         
         // Test invalid key creation
         let invalidKeyData = Data(repeating: 0, count: 16) // Too short for Curve25519
-        XCTAssertThrowsError(try Curve25519PublicKey.fromSlice(bytes: Array(invalidKeyData))) { error in
+        XCTAssertThrowsError(try Curve25519PublicKey.fromSlice(bytes: invalidKeyData)) { error in
             print("✓ Correctly caught invalid key error: \(error)")
         }
     }

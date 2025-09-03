@@ -16,15 +16,16 @@ This directory contains comprehensive tests for the Vodozemac Swift bindings.
   - Error handling and edge cases
   - Performance testing
 
-### Test Vector Validation
-- **`swift_tests/`** - Swift Package Manager based test suite that validates against official test vectors
-  - Uses structured test data from JSON files
-  - Validates implementation against known good values
-  - Separate from runtime functionality tests
+### Test Vector Validation (Currently Outdated)
+- **`swift_tests/`** - Swift Package Manager based test suite intended to validate against official test vectors
+  - ⚠️ **Status**: Currently uses outdated API (wrapper classes vs direct generated classes)
+  - ⚠️ **Test Vectors**: Reference test vector generator has API compatibility issues
+  - 💡 **Recommendation**: Use the comprehensive XCTest suite instead for reliable testing
+  - 🔧 **Requires Updates**: Would need API modernization to work with current UniFFI generated bindings
 
-### Reference Tests
+### Reference Tests  
 - **`kotlin_tests/`** - Kotlin test reference implementations
-- **`rust_reference/`** - Rust reference test implementations
+- **`rust_reference/`** - Rust reference test implementations (currently outdated)
 
 # Vodozemac Swift Bindings Tests
 
@@ -62,41 +63,41 @@ This directory contains comprehensive tests for the Vodozemac Swift bindings.
 
 ## Running Tests
 
-### Option 1: Using Xcode (Recommended)
-1. Ensure Swift bindings are generated:
-   ```bash
-   cd /Users/tango16/code/vodozemac/bindings
-   ./generate_bindings.sh
-   ```
+### ✅ Recommended: Comprehensive XCTest Suite
 
-2. Open the Xcode project:
-   ```bash
-   cd tests
-   open VodozemacTests.xcodeproj
-   ```
+The most reliable way to test the Vodozemac Swift bindings:
 
-3. In Xcode:
-   - Select the `VodozemacTests` scheme
-   - Press `Cmd+U` to run all tests
-   - View results in the Test Navigator (Cmd+6)
-
-### Option 2: Command Line with xcodebuild
-Use the provided test runner script:
+#### Command Line (Easiest)
 ```bash
 cd /Users/tango16/code/vodozemac/bindings/tests
 ./run_comprehensive_tests.sh
 ```
 
-This script will:
-1. Check for Xcode Command Line Tools
-2. Generate Swift bindings if needed
-3. Build and run the XCTest suite using `xcodebuild`
-4. Report results
+#### Xcode GUI
+```bash
+cd /Users/tango16/code/vodozemac/bindings/tests
+open VodozemacTests.xcodeproj
+# In Xcode: Press Cmd+U to run tests
+```
 
-### Option 3: Manual xcodebuild
-If you need to run tests manually:
+### ⚠️ Swift Package Manager Tests (Outdated)
 
-1. Ensure Swift bindings are generated:
+The `swift_tests/` directory contains a Swift Package Manager test suite, but it's currently outdated:
+
+**Issues:**
+- Uses old API wrapper classes (`AccountWrapper`, `SessionWrapper`) instead of current generated classes (`Account`, `Session`)
+- Test vector generation is broken due to Rust API changes
+- Requires significant updates to work with current codebase
+
+**To attempt to run (not recommended):**
+```bash
+cd /Users/tango16/code/vodozemac/bindings/tests
+./setup_swift_package_tests.sh  # Shows what needs to be fixed
+```
+
+**Better alternative:** Use the comprehensive XCTest suite which is actively maintained and tests all current functionality.
+
+## Test Coverage
 ```bash
 cd /Users/tango16/code/vodozemac/bindings && ./generate_bindings.sh
 ```

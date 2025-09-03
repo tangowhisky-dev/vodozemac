@@ -14,22 +14,25 @@ let package = Package(
     ],
     dependencies: [],
     targets: [
+        .systemLibrary(
+            name: "vodozemacFFI",
+            path: "Sources/Vodozemac",
+            pkgConfig: nil,
+            providers: nil),
         .target(
             name: "Vodozemac",
-            path: "../../swift",
-            sources: ["vodozemac.swift"],
-            publicHeadersPath: ".",
+            dependencies: ["vodozemacFFI"],
             cSettings: [
                 .headerSearchPath(".")
             ],
             linkerSettings: [
-                .linkedLibrary("vodozemac_uniffi", .when(platforms: [.macOS, .iOS]))
+                .linkedLibrary("vodozemac_bindings_universal", .when(platforms: [.macOS, .iOS])),
+                .unsafeFlags(["-L."], .when(platforms: [.macOS]))
             ]
         ),
         .testTarget(
             name: "VodozemacTests",
             dependencies: ["Vodozemac"],
-            path: "Tests",
             resources: [
                 .copy("../test_vectors.json")
             ]
