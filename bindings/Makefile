@@ -13,7 +13,7 @@ $(error "uniffi-bindgen not found in PATH. Install via `cargo install uniffi_bin
 endif
 LIBRARY_DEBUG = ../target/debug/libvodozemac_bindings.dylib
 LIBRARY_RELEASE = ../target/release/libvodozemac_bindings.dylib
-GENERATED_DIR = ./generated
+GENERATED_DIR = ./generated/swift
 
 .PHONY: all clean build generate test swift-test help
 
@@ -50,6 +50,8 @@ generate: build
 	@echo "🏗️  Generating Swift bindings (debug)..."
 	mkdir -p $(GENERATED_DIR)
 	$(UNIFFI_CLI) generate --library $(LIBRARY_DEBUG) --language swift --out-dir $(GENERATED_DIR)
+	@echo "🔧 Updating contract version from 30 to 29..."
+	sed -i '' 's/let bindings_contract_version = 30/let bindings_contract_version = 29/g' $(GENERATED_DIR)/vodozemac.swift
 	@echo "✅ Swift bindings generated in $(GENERATED_DIR)"
 
 # Generate Swift bindings (release)
@@ -57,6 +59,8 @@ generate-release: build-release
 	@echo "🏗️  Generating Swift bindings (release)..."
 	mkdir -p $(GENERATED_DIR)
 	$(UNIFFI_CLI) generate --library $(LIBRARY_RELEASE) --language swift --out-dir $(GENERATED_DIR)
+	@echo "🔧 Updating contract version from 30 to 29..."
+	sed -i '' 's/let bindings_contract_version = 30/let bindings_contract_version = 29/g' $(GENERATED_DIR)/vodozemac.swift
 
 # Run Swift test script (requires bindings to be generated)
 swift-test: generate
@@ -67,7 +71,7 @@ swift-test: generate
 clean:
 	@echo "🧹 Cleaning build artifacts..."
 	cargo clean
-	rm -rf $(GENERATED_DIR)
+	rm -rf ./generated
 	@echo "✅ Clean complete"
 
 # Rebuild everything

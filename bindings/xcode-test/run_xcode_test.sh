@@ -11,7 +11,7 @@ echo "======================================================="
 # Get the directory of this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BINDINGS_DIR="$(dirname "$SCRIPT_DIR")"
-GENERATED_DIR="$BINDINGS_DIR/generated"
+GENERATED_DIR="$BINDINGS_DIR/generated/swift"
 TARGET_DIR="$BINDINGS_DIR/../target/debug"
 
 # Check prerequisites
@@ -105,7 +105,7 @@ if [ $TEST_EXIT_CODE -eq 0 ]; then
     echo ""
     echo "📝 Next steps:"
     echo "   1. See docs/XcodeIntegrationGuide.md for full integration instructions"
-    echo "   2. Copy the generated/ files to your Xcode project"
+    echo "   2. Copy the generated/swift/ files to your Xcode project"
     echo "   3. Configure build settings as described in the guide"
 else
     echo ""
