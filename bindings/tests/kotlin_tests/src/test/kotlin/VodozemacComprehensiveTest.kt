@@ -68,8 +68,14 @@ data class SasTest(
     val name: String,
     @SerialName("alice_public_key") val alicePublicKey: String,
     @SerialName("bob_public_key") val bobPublicKey: String,
+    @SerialName("shared_secret") val sharedSecret: String,
+    val info: String,
+    @SerialName("sas_bytes") val sasBytes: String,
     @SerialName("emoji_indices") val emojiIndices: List<UInt>,
-    val decimals: List<UInt>
+    val decimals: List<UInt>,
+    @SerialName("mac_info") val macInfo: String,
+    @SerialName("mac_message") val macMessage: String,
+    @SerialName("calculated_mac") val calculatedMac: String
 )
 
 @Serializable
@@ -166,10 +172,11 @@ class VodozemacComprehensiveTest {
             // Alice encrypts a message
             val encrypted = aliceSession.`encrypt`(sessionTest.plaintext.toByteArray())
             
-            // Cast to PreKeyMessage for the first message
+            // Convert OlmMessage to PreKeyMessage for the first message
+            val preKeyMessage = PreKeyMessage.`fromBase64`(encrypted.`toBase64`())
             val bobSessionResult = bob.`createInboundSession`(
                 alice.`identityKeys`().`curve25519`(),
-                encrypted as PreKeyMessage
+                preKeyMessage
             )
             
             assertEquals("Decrypted message should match original", 
@@ -229,27 +236,38 @@ class VodozemacComprehensiveTest {
             val aliceEstablished = alice.`diffieHellman`(bobPublicKey)
             val bobEstablished = bob.`diffieHellman`(alicePublicKey)
             
-            // Generate bytes
-            val aliceBytes = aliceEstablished.`bytes`("")
-            val bobBytes = bobEstablished.`bytes`("")
+            // Generate bytes with consistent info string
+            val info = sasTest.info
+            val aliceBytes = aliceEstablished.`bytes`(info)
+            val bobBytes = bobEstablished.`bytes`(info)
             
             // Verify both sides generate the same bytes
-            assertEquals("SAS bytes should match", aliceBytes.`emojiIndices`(), bobBytes.`emojiIndices`())
+            assertArrayEquals("SAS bytes should match", aliceBytes.`asBytes`(), bobBytes.`asBytes`())
             
-            // Test emoji generation
+            // Test emoji generation - both sides should generate same indices
             val aliceEmojis = aliceBytes.`emojiIndices`()
             val bobEmojis = bobBytes.`emojiIndices`()
             
-            assertEquals("Emoji indices should match", aliceEmojis, bobEmojis)
+            assertEquals("Emoji indices should match", aliceEmojis.toList(), bobEmojis.toList())
             
-            // Test decimal generation
+            // Test decimal generation - both sides should generate same decimals  
             val aliceDecimals = aliceBytes.`decimals`()
             val bobDecimals = bobBytes.`decimals`()
             
-            assertEquals("Decimals should match", aliceDecimals, bobDecimals)
+            assertEquals("Decimals should match", aliceDecimals.toList(), bobDecimals.toList())
             
-            println("    ✅ SAS operations validated")
+            // Test MAC calculation
+            val macMessage = sasTest.macMessage
+            val macInfo = sasTest.macInfo
+            val aliceMac = aliceEstablished.`calculateMac`(macMessage, macInfo)
+            val bobMac = bobEstablished.`calculateMac`(macMessage, macInfo)
+            
+            assertEquals("MAC calculations should match", aliceMac.`toBase64`(), bobMac.`toBase64`())
+            
+            println("    ✅ SAS operations validated for ${sasTest.name}")
         }
+        
+        println("✅ SAS operations completed")
     }
     
     @Test
@@ -282,7 +300,7 @@ class VodozemacComprehensiveTest {
             val aliceCheckCode = aliceResult.`ecies`().`checkCode`()
             val bobCheckCode = bobResult.`ecies`().`checkCode`()
             
-            assertEquals("Check codes should match", aliceCheckCode.`asBytes`(), bobCheckCode.`asBytes`())
+            assertArrayEquals("Check codes should match", aliceCheckCode.`asBytes`(), bobCheckCode.`asBytes`())
             
             println("    ✅ ECIES operations validated")
         }
