@@ -12,7 +12,7 @@ echo "======================================================="
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BINDINGS_DIR="$(dirname "$SCRIPT_DIR")"
 GENERATED_DIR="$BINDINGS_DIR/generated/swift"
-TARGET_DIR="$BINDINGS_DIR/../target/debug"
+MACOS_LIB_DIR="$GENERATED_DIR/macos"
 
 # Check prerequisites
 echo "🔍 Checking prerequisites..."
@@ -28,19 +28,33 @@ echo "   ✅ Swift compiler found: $(swiftc --version | head -n 1)"
 
 # Check if bindings are generated
 if [ ! -f "$GENERATED_DIR/vodozemac.swift" ]; then
-    echo "❌ Generated bindings not found. Please run 'make generate' first."
-    exit 1
+    echo "❌ Generated bindings not found. Running generate_bindings.sh to create them..."
+    cd "$BINDINGS_DIR"
+    ./generate_bindings.sh
+    cd "$SCRIPT_DIR"
+    
+    if [ ! -f "$GENERATED_DIR/vodozemac.swift" ]; then
+        echo "❌ Failed to generate Swift bindings."
+        exit 1
+    fi
 fi
 
 echo "   ✅ Generated Swift bindings found"
 
 # Check if the dynamic library exists
-if [ ! -f "$TARGET_DIR/libvodozemac_bindings.dylib" ]; then
-    echo "❌ Dynamic library not found. Please run 'cargo build' first."
-    exit 1
+if [ ! -f "$MACOS_LIB_DIR/libvodozemac_bindings_universal.dylib" ]; then
+    echo "❌ macOS universal library not found. Running generate_bindings.sh to build libraries..."
+    cd "$BINDINGS_DIR"
+    ./generate_bindings.sh
+    cd "$SCRIPT_DIR"
+    
+    if [ ! -f "$MACOS_LIB_DIR/libvodozemac_bindings_universal.dylib" ]; then
+        echo "❌ Failed to generate macOS universal library."
+        exit 1
+    fi
 fi
 
-echo "   ✅ Dynamic library found"
+echo "   ✅ macOS universal library found"
 
 # Create temporary directory for compilation
 TEMP_DIR=$(mktemp -d)
@@ -56,7 +70,7 @@ cp "$SCRIPT_DIR/ecies_tests.swift" "$TEMP_DIR/"
 cp "$SCRIPT_DIR/sas_tests.swift" "$TEMP_DIR/"
 cp "$SCRIPT_DIR/olm_tests.swift" "$TEMP_DIR/"
 cp "$SCRIPT_DIR/megolm_tests.swift" "$TEMP_DIR/"
-cp "$TARGET_DIR/libvodozemac_bindings.dylib" "$TEMP_DIR/"
+cp "$MACOS_LIB_DIR/libvodozemac_bindings_universal.dylib" "$TEMP_DIR/libvodozemac_bindings.dylib"
 
 echo "🔨 Compiling Swift test program..."
 cd "$TEMP_DIR"
@@ -98,15 +112,19 @@ if [ $TEST_EXIT_CODE -eq 0 ]; then
     echo ""
     echo "✅ The vodozemac Swift bindings work correctly with Xcode tools"
     echo "✅ All functions are accessible and working as expected"
-    echo "✅ Dynamic library linking is working properly"
+    echo "✅ Universal macOS library linking is working properly"
     echo "✅ FFI interface is functioning correctly"
     echo ""
-    echo "🚀 Your bindings are ready for integration into Xcode projects!"
+    echo "🚀 Your bindings are ready for integration into iOS/macOS Xcode projects!"
     echo ""
     echo "📝 Next steps:"
-    echo "   1. See docs/XcodeIntegrationGuide.md for full integration instructions"
-    echo "   2. Copy the generated/swift/ files to your Xcode project"
-    echo "   3. Configure build settings as described in the guide"
+    echo "   1. See bindings/tests/README.md for iOS integration instructions"
+    echo "   2. Use libraries from generated/swift/ folder:"
+    echo "      - macos/ for macOS applications"
+    echo "      - ios-device/ for iPhone/iPad"
+    echo "      - ios-simulator/ for iOS Simulator"  
+    echo "   3. Copy the generated/swift/ files to your Xcode project"
+    echo "   4. Configure build settings as described in the documentation"
 else
     echo ""
     echo "❌ XCODE COMMAND LINE TEST FAILED!"

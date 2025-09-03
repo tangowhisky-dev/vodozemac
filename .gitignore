@@ -7,3 +7,6 @@ mutants.out*
 coverage.xml
 /bindings/vodozemac_uniffi/target
 /doc
+/bindings/generated/swift/ios-device
+/bindings/generated/swift/ios-simulator
+/bindings/generated/swift/macos
