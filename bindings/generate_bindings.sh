@@ -30,7 +30,9 @@ cargo build --target aarch64-apple-ios-sim
 echo ""
 echo "🧽 Cleaning generated directory..."
 rm -rf generated/swift
+rm -rf generated/kotlin
 mkdir -p generated/swift
+mkdir -p generated/kotlin
 
 # Create directories for different targets
 mkdir -p generated/swift/macos
@@ -43,6 +45,14 @@ uniffi-bindgen generate --library ../target/aarch64-apple-darwin/debug/libvodoze
 
 echo "🔧 Updating contract version from 30 to 29..."
 sed -i '' 's/let bindings_contract_version = 30/let bindings_contract_version = 29/g' generated/swift/vodozemac.swift
+
+echo ""
+echo "🔄 Generating Kotlin bindings..."
+# Generate Kotlin bindings using the same library
+uniffi-bindgen generate --library ../target/aarch64-apple-darwin/debug/libvodozemac_bindings.dylib --language kotlin --out-dir generated/kotlin
+
+echo "🔧 Updating Kotlin contract version from 30 to 29..."
+sed -i '' 's/val bindings_contract_version = 30/val bindings_contract_version = 29/g' generated/kotlin/uniffi/vodozemac/vodozemac.kt
 
 echo ""
 echo "📦 Organizing libraries by platform..."
@@ -60,6 +70,11 @@ cp ../target/aarch64-apple-ios/debug/libvodozemac_bindings.dylib generated/swift
 echo "  Copying iOS simulator libraries..."
 cp ../target/x86_64-apple-ios/debug/libvodozemac_bindings.dylib generated/swift/ios-simulator/libvodozemac_bindings_x86_64.dylib 2>/dev/null || echo "    ⚠️ x86_64-apple-ios build not available"
 cp ../target/aarch64-apple-ios-sim/debug/libvodozemac_bindings.dylib generated/swift/ios-simulator/libvodozemac_bindings_arm64.dylib 2>/dev/null || echo "    ⚠️ aarch64-apple-ios-sim build not available"
+
+# Copy macOS libraries for Kotlin JVM
+echo "  Copying libraries for Kotlin JVM..."
+cp ../target/x86_64-apple-darwin/debug/libvodozemac_bindings.dylib generated/kotlin/libvodozemac_bindings_x86_64.dylib 2>/dev/null || echo "    ⚠️ x86_64-apple-darwin build not available"
+cp ../target/aarch64-apple-darwin/debug/libvodozemac_bindings.dylib generated/kotlin/libvodozemac_bindings_arm64.dylib 2>/dev/null || echo "    ⚠️ aarch64-apple-darwin build not available"
 
 echo ""
 echo "🔗 Creating universal binaries..."
@@ -88,6 +103,18 @@ else
     echo "    ⚠️ Skipping universal iOS simulator library (missing architectures)"
 fi
 
+# Create universal Kotlin JVM binary if both architectures are available
+if [ -f "generated/kotlin/libvodozemac_bindings_x86_64.dylib" ] && [ -f "generated/kotlin/libvodozemac_bindings_arm64.dylib" ]; then
+    echo "  Creating universal Kotlin JVM library..."
+    lipo -create \
+        generated/kotlin/libvodozemac_bindings_x86_64.dylib \
+        generated/kotlin/libvodozemac_bindings_arm64.dylib \
+        -output generated/kotlin/libvodozemac_bindings_universal.dylib
+    echo "    ✅ Universal Kotlin JVM library created"
+else
+    echo "    ⚠️ Skipping universal Kotlin JVM library (missing architectures)"
+fi
+
 echo ""
 echo "📋 Library Summary:"
 echo "===================="
@@ -100,16 +127,22 @@ ls -la generated/swift/ios-device/ 2>/dev/null | grep -E '\.dylib$' | awk '{prin
 echo "📁 iOS simulator libraries:"
 ls -la generated/swift/ios-simulator/ 2>/dev/null | grep -E '\.dylib$' | awk '{print "   " $9 " (" $5 " bytes)"}' || echo "   No iOS simulator libraries found"
 
+echo "📁 Kotlin JVM libraries:"
+ls -la generated/kotlin/ 2>/dev/null | grep -E '\.dylib$' | awk '{print "   " $9 " (" $5 " bytes)"}' || echo "   No Kotlin libraries found"
+
 echo ""
 echo "🎉 Multi-platform bindings generated successfully!"
 echo "📍 Swift bindings: generated/swift/"
+echo "📍 Kotlin bindings: generated/kotlin/"
 echo "📍 Platform libraries:"
 echo "   • macOS: generated/swift/macos/"
 echo "   • iOS Device: generated/swift/ios-device/" 
 echo "   • iOS Simulator: generated/swift/ios-simulator/"
+echo "   • Kotlin JVM: generated/kotlin/"
 echo ""
 echo "💡 Usage Notes:"
 echo "   • For macOS: Use libvodozemac_bindings_universal.dylib (or architecture-specific)"
 echo "   • For iOS Device: Use ios-device/libvodozemac_bindings.dylib" 
 echo "   • For iOS Simulator: Use libvodozemac_bindings_universal.dylib (or architecture-specific)"
+echo "   • For Kotlin JVM: Use kotlin/libvodozemac_bindings_universal.dylib (or architecture-specific)"
 echo "   • For Xcode projects: Add appropriate library based on your target platform"

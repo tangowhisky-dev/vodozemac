@@ -1,0 +1,132 @@
+{
+  "account_tests": [
+    {
+      "name": "Basic Account Operations",
+      "identity_keys": {
+        "curve25519": "wl5v/+3GkqCEJCknm+xHXs6AR16DqM04G2oFtp89zGY",
+        "ed25519": "T2y5TM3Ah/vUt9zX+EsFI9j/gIrIk/+5PYXU3a9L8VE"
+      },
+      "one_time_keys_count": 5,
+      "one_time_keys": {
+        "KeyId(2)": "g88ggXQCqJYs4X4OVqegSQ5dPYokAIGeiS9RLQz4kHo",
+        "KeyId(3)": "tUgYUyNAp5nh55u0fLT4kcPFP1nLAZqn4WDAH8jkiSY",
+        "KeyId(0)": "6TXFmaQ3UbDyXf1TpWrKKvEKIdwbHAV4jzp1gIpvVmQ",
+        "KeyId(1)": "f8Xa5Ut70Qu3cUvB9NOJdoOfQoytQwf2h2+1zhUyPWI",
+        "KeyId(4)": "NaHa+WyKcbiAdVH03CMTAI/eUzF6uEx/DXQqviv6Pn0"
+      },
+      "fallback_key": {
+        "KeyId(0)": "cktwz1lH6IrWFvN4k6quSagUcQmodRNE6wiwJaQoVQE"
+      },
+      "signature_message": "Test message for signing",
+      "signature": "rf8LG85W5osFs7bUcxjKx0QqOZv/vvLyH91FiaWWWCZAONkXQvvapSIxYJI+lLWzyEakCmIECmKaOEBgTz5LDg"
+    }
+  ],
+  "session_tests": [
+    {
+      "name": "Basic Olm Session Test",
+      "session_id": "l5Jp5bxktKkd2us3/I1ETl/pP4IP48ImyZbrvmqM2A0",
+      "plaintext": "Hello from Alice to Bob!",
+      "encrypted_message": "AwogkhWOPh3MutwsK1sr/2AfKHml9KVmQve6NF/kHy0jRGoSINkkSGPIwLsY1qW3aHdNChaJFy7Rw2XD4OR/TAtYY8JEGiC9IlNhTN7qPfktJ7dqBBJNpFAUl6bClyqzpyXvOAqOVSJPAwogymoOhuO4sU3vrKUBeam3fXKhljX/gqhi/aG4YfnFWXQQACIguLQWs+M0xG/ZbNc8cH9XX9oUXrMr3CsAODwsqRgcdtpHi0c13suiUA",
+      "decrypted_message": "Hello from Alice to Bob!"
+    }
+  ],
+  "group_session_tests": [
+    {
+      "name": "Megolm v1 Group Session Test",
+      "session_id": "LaXYB1dNHfvP9G9HTDP+N649F5l0RGYfmtU2bDBmkyY",
+      "session_key": "AgAAAABF83MdVg5BKvBjML5jx+6rt2OK40G0qY5FlLOQgGmqHL7+WfpYR/nQHQH3zieYXhPDBFa+zRzpdPbt1KFmf031IDIGqcphhCCFNfW5MoKBYase6tu8joLLm0MT0P/wTpW6cO83iAoh8PK6tvztUcp86pF1aJQqyQPfFjq8R+8c5S2l2AdXTR37z/RvR0wz/jeuPReZdERmH5rVNmwwZpMmvejTqZazFe2aCAZq32Gvcjfp9FaPFOAS1ui3TxzubAOHWCAlzwTN+cc1jjekZjvR31hHuCFzkwlzod2WLYlRBQ",
+      "message_index": 0,
+      "plaintext": "Hello, group! This is a Megolm message.",
+      "encrypted_message": "AwgAEjD8kjXj320Tx3ZmhRGnyoYc2lDjS+5N+rr33PUlCUyXwhfZxGDMQ8KzJrkVqPO7ArkO9aby6uyMwMJwMUpZgUYkFWiclPu4aEen7IOLADv7/9P6nzrpXJv5d2jntXRC8mdI0I2LFP7F5xa/yaaBifQa62giFexeeAA",
+      "decrypted_message": "Hello, group! This is a Megolm message.",
+      "decrypted_index": 0
+    },
+    {
+      "name": "Megolm v2 Group Session Test",
+      "session_id": "KWfJUxeGUkXWKjM9oVQ1XjuIj8kq4/6G9PtcVY8fwds",
+      "session_key": "AgAAAADh8vMkTmCLF/dsG9V4rX7G2JoNfseXNJXWqXIx8yHrcnyj7lfXgN0nrlzpKA0opuSUktBUKVotafl4GTh9PGmt9WCTDUA+OlycuWxVtpIC3nwKmgSv1kR8aul382jSvbazLHswuQNoMcg8I48PMOVrkeS6nTVVqLYyKudEtvtzeilnyVMXhlJF1iozPaFUNV47iI/JKuP+hvT7XFWPH8HbaUkJ5FsHDYyOMBI57YKQks1J+viM6NbSA8iIGsbaw6mqng3JiIJTq+WIgdIm4MMY1X5RUpO0fLY8oQPojIJTBg",
+      "message_index": 0,
+      "plaintext": "Hello, group! This is a Megolm v2 message.",
+      "encrypted_message": "BAgAEjDTDHL+AsMU3ZfcWhvSRyq2n4P1SzUuprzgeDCkHkyevHF0u9oA/JjwHom3lc7LZfmO9bxQwfnoOpVxlRsbo+8ep1Oen6uwHHlo3vAMbfm3vAqdIokLcDdYpEDyKvYiRvzBKlZl/FzB3of6oM7yUs59Sdi80TAxbsSvytoaPPlxp9Jl9kvX1RRr4PRd+qbWDAs",
+      "decrypted_message": "Hello, group! This is a Megolm v2 message.",
+      "decrypted_index": 0
+    }
+  ],
+  "sas_tests": [
+    {
+      "name": "Basic SAS Test",
+      "alice_public_key": "Te1X0FnSyGpoltPwLSN3GXJj3yZANvmLekqhl3qC1Ek",
+      "bob_public_key": "Qokls8IB2lASRlDfWWaBoY4jUGLr6Kylfpe0vh1fIDk",
+      "shared_secret": "NgYiiIjq",
+      "info": "Test SAS Info",
+      "sas_bytes": "NgYiiIjq",
+      "emoji_indices": [
+        13,
+        32,
+        24,
+        34,
+        34,
+        8,
+        35
+      ],
+      "decimals": [
+        2728,
+        7282,
+        2092
+      ],
+      "mac_info": "Test MAC Info",
+      "mac_message": "Message to authenticate",
+      "calculated_mac": "mgmGLcUMfdluP1JuVvvKNdn6EcYYCzAwx3HWHCBV51Y"
+    }
+  ],
+  "ecies_tests": [
+    {
+      "name": "Basic ECIES Test",
+      "alice_public_key": "8KCPVWjjCzK3QMZf10OftVDGMfz97hau8bGI241+B1U",
+      "bob_public_key": "q1YRn7ghqIMwcIYJP0ku0/R2P7r+Ey5AICXAyQixZnU",
+      "plaintext": "This is a test message for ECIES encryption",
+      "encrypted_message": "lFIIPdYf+B+a7b9eM4FCQ6Ld47Y6AC1We080AFsIu4HIXA+o834HhjTY1qy4rBRceAwG6Uux2DBuvao|8KCPVWjjCzK3QMZf10OftVDGMfz97hau8bGI241+B1U",
+      "decrypted_message": "This is a test message for ECIES encryption",
+      "check_code": 2
+    }
+  ],
+  "utility_tests": {
+    "base64_encode_tests": [
+      {
+        "input": "Hello, World!",
+        "output": "SGVsbG8sIFdvcmxkIQ"
+      },
+      {
+        "input": "The quick brown fox jumps over the lazy dog",
+        "output": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw"
+      },
+      {
+        "input": "",
+        "output": ""
+      },
+      {
+        "input": "Test with special chars: !@#$%^&*()",
+        "output": "VGVzdCB3aXRoIHNwZWNpYWwgY2hhcnM6ICFAIyQlXiYqKCk"
+      }
+    ],
+    "base64_decode_tests": [
+      {
+        "input": "SGVsbG8sIFdvcmxkIQ",
+        "output": "Hello, World!"
+      },
+      {
+        "input": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw",
+        "output": "The quick brown fox jumps over the lazy dog"
+      },
+      {
+        "input": "",
+        "output": ""
+      },
+      {
+        "input": "VGVzdCB3aXRoIHNwZWNpYWwgY2hhcnM6ICFAIyQlXiYqKCk",
+        "output": "Test with special chars: !@#$%^&*()"
+      }
+    ],
+    "version": "0.9.0"
+  }
+}

@@ -13,3 +13,7 @@ coverage.xml
 /bindings/tests/modern_test_vectors/target
 /bindings/tests/rust_reference/target
 /bindings/tests/swift_tests/.build
+/bindings/tests/kotlin_tests/build
+/bindings/tests/kotlin_tests/.gradle
+/bindings/tests/kotlin_tests/src/main/resources
+*.dylib
